@@ -12,150 +12,126 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SHELL := /bin/bash
-TARGET = kubefed
-GOTARGET = sigs.k8s.io/$(TARGET)
-REGISTRY ?= quay.io/kubernetes-multicluster
-IMAGE = $(REGISTRY)/$(TARGET)
-DIR := ${CURDIR}
-BIN_DIR := bin
-DOCKER ?= docker
-HOST_ARCH ?= $(shell go env GOARCH)
-HOST_PLATFORM ?= $(shell uname -s | tr A-Z a-z)-$(HOST_ARCH)
+# Image URL to use all building/pushing image targets
+IMG ?= sit-registry.faw.cn/kubesphere/kubefed:latest
 
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
+
+# CONTAINER_TOOL defines the container tool to be used for building images.
+# Be aware that the target commands are only tested with Docker which is
+# scaffolded by default. However, you might want to replace it to use other
+# tools. (i.e. podman)
+CONTAINER_TOOL ?= docker
+
+# Setting SHELL to bash allows bash commands to be executed by recipes.
+# Options are set to exit when a recipe line exits non-zero or a piped command fails.
+SHELL = /usr/bin/env bash -o pipefail
+.SHELLFLAGS = -ec
+
+# Retrieve the Git version information, including any local changes
 GIT_VERSION ?= $(shell git describe --always --dirty)
+# Retrieve the exact Git tag if it matches the current commit, otherwise empty
 GIT_TAG ?= $(shell git describe --tags --exact-match 2>/dev/null)
+# Retrieve the full Git commit hash
 GIT_HASH ?= $(shell git rev-parse HEAD)
+# Retrieve the current Git branch name, excluding 'HEAD' if present
 GIT_BRANCH ?= $(filter-out HEAD,$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null))
+# Get the build date in UTC format
 BUILDDATE = $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 
-# Note: this is allowed to be overridden for scripts/deploy-kubefed.sh
-IMAGE_NAME = $(REGISTRY)/$(TARGET):$(GIT_VERSION)
+.PHONY: help
+help: ## Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-GIT_TREESTATE = "clean"
-DIFF = $(shell git diff --quiet >/dev/null 2>&1; if [ $$? -eq 1 ]; then echo "1"; fi)
-ifeq ($(DIFF), 1)
-    GIT_TREESTATE = "dirty"
-endif
+.PHONY: all
 
-ifneq ($(VERBOSE),)
-VERBOSE_FLAG = -v
-endif
-BUILDMNT = /go/src/$(GOTARGET)
-# The version here should match the version of go configured in
-# .github/workflows files.
-BUILD_IMAGE ?= golang:1.16.6
+all: help
 
-HYPERFED_TARGET = bin/hyperfed
-CONTROLLER_TARGET = bin/controller-manager
-KUBEFEDCTL_TARGET = bin/kubefedctl
-WEBHOOK_TARGET = bin/webhook
-E2E_BINARY_TARGET = bin/e2e
+##@ Development
 
-LDFLAG_OPTIONS = -ldflags "-X sigs.k8s.io/kubefed/pkg/version.version=$(GIT_VERSION) \
-                      -X sigs.k8s.io/kubefed/pkg/version.gitCommit=$(GIT_HASH) \
-                      -X sigs.k8s.io/kubefed/pkg/version.gitTreeState=$(GIT_TREESTATE) \
-                      -X sigs.k8s.io/kubefed/pkg/version.buildDate=$(BUILDDATE)"
+.PHONY: fmt
+fmt: ## Run go fmt against code.
+	go fmt ./...
 
-export GOPATH ?= $(shell go env GOPATH)
-GO_BUILDCMD = CGO_ENABLED=0 go build $(VERBOSE_FLAG) $(LDFLAG_OPTIONS)
+.PHONY: vet
+vet: ## Run go vet against code.
+	go vet ./...
 
-TESTARGS ?= $(VERBOSE_FLAG) -timeout 60s
-TEST_PKGS ?= $(GOTARGET)/cmd/... $(GOTARGET)/pkg/...
-TEST_CMD = go test $(TESTARGS)
-TEST = $(TEST_CMD) $(TEST_PKGS)
-
-ISTTY := $(shell [ -t 0 ] && echo 1)
-
-DOCKER_BUILD ?= $(DOCKER) run --rm $(if $(ISTTY),-it) -u $(shell id -u):$(shell id -g) -e GOCACHE=/tmp/gocache -v $(DIR):$(BUILDMNT) -w $(BUILDMNT) $(BUILD_IMAGE)
-
-# TODO (irfanurrehman): can add local compile, and auto-generate targets also if needed
-.PHONY: all container push clean hyperfed controller kubefedctl test local-test vet lint build bindir generate webhook e2e deploy.kind
-
-all: container hyperfed controller kubefedctl webhook e2e
-
-# Unit tests
-test:
+.PHONY: test
+test: ## Run unit test.
 	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 	source <(setup-envtest use -p env 1.24.x) && \
 		go test $(TEST_PKGS)
 
-build: hyperfed controller kubefedctl webhook
+##@ Build
 
-lint:
+.PHONY: build
+build: fmt vet ## build hyperfed controller kubefedctl webhook binary.
+	go build -o bin/controller-manager cmd/controller-manager/main.go
+	go build -o bin/hyperfed cmd/hyperfed/main.go
+	go build -o bin/kubefedctl cmd/kubefedctl/main.go
+	go build -o bin/webhook cmd/webhook/main.go
+
+.PHONY: lint
+lint: ## Run golangci-lint check.
 	golangci-lint run -c .golangci.yml --fix
 
-container: $(HYPERFED_TARGET)-linux-$(HOST_ARCH)
-	cp -f $(HYPERFED_TARGET)-linux-$(HOST_ARCH) images/kubefed/hyperfed
-	$(DOCKER) build images/kubefed -t $(IMAGE_NAME)
-	rm -f images/kubefed/hyperfed
+# If you wish to build the manager image targeting other platforms you can use the --platform flag.
+# (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
+# More info: https://docs.docker.com/develop/develop-images/build_enhancements/
+.PHONY: docker-build
+docker-build: ## Build docker image with the kubefed.
+	$(CONTAINER_TOOL) build -t ${IMG} build/kubefed/Dockerfile .
 
-bindir:
-	mkdir -p $(BIN_DIR)
+.PHONY: docker-push
+docker-push: ## Push docker image with the kubefed.
+	$(CONTAINER_TOOL) push ${IMG}
 
-COMMANDS := $(HYPERFED_TARGET) $(CONTROLLER_TARGET) $(KUBEFEDCTL_TARGET) $(WEBHOOK_TARGET)
-PLATFORMS := linux-amd64 linux-arm64 linux-ppc64le linux-s390x darwin-amd64
-ALL_BINS :=
+# PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
+# architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
+# - be able to use docker buildx. More info: https://docs.docker.com/build/buildx/
+# - have enabled BuildKit. More info: https://docs.docker.com/develop/develop-images/build_enhancements/
+# - be able to push the image to your registry (i.e. if you do not set a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
+# To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
+PLATFORMS ?= linux/amd64,linux/arm64
 
-define PLATFORM_template
-$(1)-$(2): bindir
-	$(DOCKER_BUILD) env GOARCH=$(word 2,$(subst -, ,$(2))) GOOS=$(word 1,$(subst -, ,$(2))) $(GO_BUILDCMD) -o $(1)-$(2) cmd/$(3)/main.go
-ALL_BINS := $(ALL_BINS) $(1)-$(2)
-endef
-$(foreach cmd, $(COMMANDS), $(foreach platform, $(PLATFORMS), $(eval $(call PLATFORM_template, $(cmd),$(platform),$(notdir $(cmd))))))
+.PHONY: docker-buildx
+docker-buildx: ## Build and push docker image for the kubefed for cross-platform support.
+	- $(CONTAINER_TOOL) buildx create --name project-v3-builder
+	$(CONTAINER_TOOL) buildx use project-v3-builder
+	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f build/kubefed/Dockerfile .
+	- $(CONTAINER_TOOL) buildx rm project-v3-builder
 
-define E2E_PLATFORM_template
-$(1)-$(2): bindir
-	$(DOCKER_BUILD) env GOARCH=$(word 2,$(subst -, ,$(2))) GOOS=$(word 1,$(subst -, ,$(2))) go test -c $(LDFLAG_OPTIONS) -o $(1)-$(2) ./test/$(3)
-ALL_BINS := $(ALL_BINS) $(1)-$(2)
-endef
-$(foreach platform, $(PLATFORMS), $(eval $(call E2E_PLATFORM_template, $(E2E_BINARY_TARGET),$(platform),$(notdir $(E2E_BINARY_TARGET)))))
+##@ Deployment
 
-define CMD_template
-$(1): $(1)-$(HOST_PLATFORM)
-	ln -sf $(notdir $(1)-$(HOST_PLATFORM)) $(1)
-ALL_BINS := $(ALL_BINS) $(1)
-endef
-$(foreach cmd, $(COMMANDS), $(eval $(call CMD_template,$(cmd))))
-$(eval $(call CMD_template,$(E2E_BINARY_TARGET)))
-
-hyperfed: $(HYPERFED_TARGET)
-
-controller: $(CONTROLLER_TARGET)
-
-kubefedctl: $(KUBEFEDCTL_TARGET)
-
-webhook: $(WEBHOOK_TARGET)
-
-e2e: $(E2E_BINARY_TARGET)
+ifndef ignore-not-found
+  ignore-not-found = false
+endif
 
 # Generate code
-generate-code: controller-gen
+.PHONY: generate-code
+generate-code: controller-gen ## Run controller-gen and generate code.
 	controller-gen object:headerFile=./hack/boilerplate.go.txt paths="./..."
 
-generate: generate-code kubefedctl
+# Generate code
+.PHONY: generate
+generate: generate-code build ## Generate the kubefedctl and generate-code.
 	./scripts/sync-up-helm-chart.sh
 	./scripts/update-bindata.sh
 
-push: container
-	$(DOCKER) push $(IMAGE):$(GIT_VERSION)
-ifeq ($(GIT_BRANCH),master)
-	$(DOCKER) tag $(IMAGE):$(GIT_VERSION) $(IMAGE):canary
-	$(DOCKER) push $(IMAGE):canary
-endif
-ifneq ($(GIT_TAG),)
-	$(DOCKER) tag $(IMAGE):$(GIT_VERSION) $(IMAGE):$(GIT_TAG)
-	$(DOCKER) push $(IMAGE):$(GIT_TAG)
-	$(DOCKER) tag $(IMAGE):$(GIT_VERSION) $(IMAGE):latest
-	$(DOCKER) push $(IMAGE):latest
-endif
-
-clean:
+.PHONY: clean
+clean: ## Clean all the binaries.
 	rm -f $(ALL_BINS)
 	$(DOCKER) rmi $(IMAGE):$(GIT_VERSION) || true
 
 controller-gen:
 	command -v controller-gen &> /dev/null || (cd tools && go install sigs.k8s.io/controller-tools/cmd/controller-gen)
 
-deploy.kind: generate
+.PHONY: deploy.kind
+deploy.kind: generate ## Deploy the kubefed.
 	KIND_LOAD_IMAGE=y FORCE_REDEPLOY=y ./scripts/deploy-kubefed.sh $(IMAGE_NAME)

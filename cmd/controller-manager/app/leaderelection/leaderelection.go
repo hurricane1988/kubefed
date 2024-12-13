@@ -51,7 +51,7 @@ func NewKubeFedLeaderElector(opts *options.Options, fnStartControllers func(*opt
 	broadcaster.StartRecordingToSink(&corev1.EventSinkImpl{Interface: leaderElectionClient.CoreV1().Events(opts.Config.KubeFedNamespace)})
 	eventRecorder := broadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: component})
 
-	// add a uniquifier so that two processes on the same host don't accidentally both become active
+	// add an uniquer so that two processes on the same host don't accidentally both become active
 	id := hostname + "_" + string(uuid.NewUUID())
 	rl, err := resourcelock.New(string(opts.LeaderElection.ResourceLock),
 		opts.Config.KubeFedNamespace,

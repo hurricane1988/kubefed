@@ -28,5 +28,5 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_ROBOT_TOKEN }}
 
-      - name: Push Docker images
+      - name: Push Docker build
         run: make push

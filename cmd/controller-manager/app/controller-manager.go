@@ -21,7 +21,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -135,7 +134,7 @@ func Run(opts *options.Options, stopChan <-chan struct{}) error {
 	if runningInCluster && len(opts.Config.KubeFedNamespace) == 0 {
 		// For in-cluster deployment set the namespace associated
 		// with the service account token
-		data, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+		data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 		if err != nil {
 			klog.Fatalf("An error occurred while attempting to discover the KubeFed namespace from the service account: %v", err)
 		}
@@ -149,7 +148,7 @@ func Run(opts *options.Options, stopChan <-chan struct{}) error {
 
 	setOptionsByKubeFedConfig(opts)
 
-	if err := utilfeature.DefaultMutableFeatureGate.SetFromMap(opts.FeatureGates); err != nil {
+	if err = utilfeature.DefaultMutableFeatureGate.SetFromMap(opts.FeatureGates); err != nil {
 		klog.Fatalf("Invalid Feature Gate: %v", err)
 	}
 

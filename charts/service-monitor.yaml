@@ -1,0 +1,30 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kubefed-controller-manager-metrics
+  namespace: kube-federation-system
+  labels:
+    app: kubefed-controller-manager-metrics
+spec:
+  jobLabel: kubefed-controller-manager-job
+  endpoints:
+    - port: metrics
+      interval: 1m
+      scheme: http
+      path: /metrics
+      scrapeTimeout: 15s
+      honorLabels: true
+      metricRelabelings:
+        - action: replace
+          sourceLabels:
+            - __name__
+          targetLabel: __name__
+          regex: (.+)
+          replacement: kubefed_controller_${1}
+  selector:
+    matchLabels:
+      kubefed-control-plane: controller-manager
+      app.kubernetes.io/managed-by: Helm
+  namespaceSelector:
+    matchNames:
+      - kube-federation-system

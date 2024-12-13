@@ -4,8 +4,8 @@
 /kubeconfig
 /config/crds/
 # Ignore binaries built by the makefile to avoid accidentally committing them
-/images/kubefed/hyperfed
-/images/kubefed/controller-manager
+/build/kubefed/hyperfed
+/build/kubefed/controller-manager
 
 # editor and IDE paraphernalia
 .idea
