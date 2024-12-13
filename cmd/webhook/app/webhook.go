@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	ctrwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"sigs.k8s.io/kubefed/pkg/controller/webhook/federatedtypeconfig"
@@ -69,9 +70,12 @@ func Run(stopChan <-chan struct{}) error {
 	if err != nil {
 		klog.Fatalf("error setting up webhook's config: %s", err)
 	}
-	mgr, err := manager.New(config, manager.Options{
+	webhookServer := webhook.NewServer(webhook.Options{
 		Port:    port,
 		CertDir: certDir,
+	})
+	mgr, err := manager.New(config, manager.Options{
+		WebhookServer: webhookServer,
 	})
 	if err != nil {
 		klog.Fatalf("error setting up webhook manager: %s", err)
@@ -83,7 +87,7 @@ func Run(stopChan <-chan struct{}) error {
 	hookServer.Register("/validate-kubefedconfig", &ctrwebhook.Admission{Handler: &kubefedconfig.KubeFedConfigValidator{}})
 	hookServer.Register("/default-kubefedconfig", &ctrwebhook.Admission{Handler: &kubefedconfig.KubeFedConfigDefaulter{}})
 
-	hookServer.WebhookMux.Handle("/readyz/", http.StripPrefix("/readyz/", &healthz.Handler{}))
+	hookServer.WebhookMux().Handle("/readyz/", http.StripPrefix("/readyz/", &healthz.Handler{}))
 
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		klog.Fatalf("unable to run manager: %s", err)

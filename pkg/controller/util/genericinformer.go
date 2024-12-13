@@ -43,8 +43,11 @@ func NewGenericInformerWithEventHandler(config *rest.Config, namespace string, o
 	if err != nil {
 		return nil, nil, err
 	}
-
-	mapper, err := apiutil.NewDiscoveryRESTMapper(config)
+	httpClient, err := rest.HTTPClientFor(config)
+	if err != nil {
+		return nil, nil, err
+	}
+	mapper, err := apiutil.NewDynamicRESTMapper(config, httpClient)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Could not create RESTMapper from config")
 	}
@@ -54,7 +57,7 @@ func NewGenericInformerWithEventHandler(config *rest.Config, namespace string, o
 		return nil, nil, err
 	}
 
-	client, err := apiutil.RESTClientForGVK(gvk, false, config, scheme.Codecs)
+	client, err := apiutil.RESTClientForGVK(gvk, false, config, scheme.Codecs, httpClient)
 	if err != nil {
 		return nil, nil, err
 	}

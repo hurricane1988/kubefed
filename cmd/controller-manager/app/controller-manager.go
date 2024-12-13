@@ -24,12 +24,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"strings"
 
 	// Installs pprof profiling debug endpoints at /debug/pprof.
 	_ "net/http/pprof"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -41,8 +41,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/component-base/logs"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
-
 	"sigs.k8s.io/kubefed/cmd/controller-manager/app/leaderelection"
 	"sigs.k8s.io/kubefed/cmd/controller-manager/app/options"
 	corev1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
@@ -115,16 +113,17 @@ func Run(opts *options.Options, stopChan <-chan struct{}) error {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
-	go serveHealthz(healthzAddr)
-	go serveMetrics(metricsAddr, stopChan)
-	// Register kubefed custom metrics
-	kubefedmetrics.RegisterAll()
-
 	var err error
 	opts.Config.KubeConfig, err = clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
 		panic(err)
 	}
+
+	go serveHealthz(healthzAddr)
+	go serveMetrics(opts, metricsAddr)
+	// Register kubefed custom metrics
+	kubefedmetrics.RegisterAll()
+
 	if restConfigQPS > 0 {
 		opts.Config.KubeConfig.QPS = restConfigQPS
 	}
@@ -409,34 +408,20 @@ func serveHealthz(address string) {
 	klog.Fatal(http.ListenAndServe(address, nil))
 }
 
-func serveMetrics(address string, stop <-chan struct{}) {
-	listener, err := metrics.NewListener(address)
+func serveMetrics(opts *options.Options, address string) {
+	httpClient, err := rest.HTTPClientFor(opts.Config.KubeConfig)
 	if err != nil {
-		klog.Errorf("error creating the new metrics listener")
-		klog.Fatal(err)
+		klog.Fatalf("Error creating http client: %v", err)
 	}
-	var metricsPath = "/metrics"
-	handler := promhttp.HandlerFor(metrics.Registry, promhttp.HandlerOpts{
-		ErrorHandling: promhttp.HTTPErrorOnError,
-	})
-	mux := http.NewServeMux()
-	mux.Handle(metricsPath, handler)
-	server := http.Server{
-		Handler: mux,
+	newServer, err := server.NewServer(server.Options{
+		BindAddress: address,
+	}, opts.Config.KubeConfig, httpClient)
+	if err != nil {
+		klog.Fatalf("Error creating server: %v", err)
+		return
 	}
-	// Run the server
-	go func() {
-		klog.V(1).Infof("starting metrics server path %s", metricsPath)
-		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
-			klog.Errorf("error starting the mertrics server")
-			klog.Fatal(err)
-		}
-	}()
-
-	// Shutdown the server when stop is closed
-	<-stop
-	if err := server.Shutdown(context.Background()); err != nil {
-		klog.Errorf("error shutting down the server")
-		klog.Fatal(err)
+	err = newServer.Start(context.Background())
+	if err != nil {
+		return
 	}
 }
