@@ -23,8 +23,10 @@ import (
 )
 
 var (
-	certDir, kubeconfig, masterURL string
-	port                           = 8443
+	certDir    string
+	kubeconfig string
+	masterURL  string
+	port       = 8443
 )
 
 // NewWebhookCommand creates a *cobra.Command object with default parameters
@@ -71,9 +73,12 @@ func Run(stopChan <-chan struct{}) error {
 		klog.Fatalf("error setting up webhook's config: %s", err)
 	}
 	webhookServer := webhook.NewServer(webhook.Options{
-		Port:    port,
+		// Port is the port number that the server will serve, Default: 9443
+		Port: port,
+		// Defaults to /tmp/k8s-webhook-server/serving-certs
 		CertDir: certDir,
 	})
+
 	mgr, err := manager.New(config, manager.Options{
 		WebhookServer: webhookServer,
 	})

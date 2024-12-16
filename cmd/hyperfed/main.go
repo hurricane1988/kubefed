@@ -137,7 +137,7 @@ func makeSymlinks(targetName string, commandFns []func() *cobra.Command) error {
 		command := commandFn()
 		link := path.Join(wd, command.Name())
 
-		err := os.Symlink(targetName, link)
+		err = os.Symlink(targetName, link)
 		if err != nil {
 			errs = true
 			fmt.Println(err)

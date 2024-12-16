@@ -75,7 +75,7 @@ func ValidateFederatedTypeConfigSpec(spec *v1beta1.FederatedTypeConfigSpec, fldP
 	return allErrs
 }
 
-const domainWithAtLeastOneDot string = "should be a domain with at least one dot"
+const domainWithAtLeastOneDot = "should be a domain with at least one dot"
 
 func ValidateFederatedAPIResource(fedType *v1beta1.APIResource, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -329,7 +329,7 @@ func ValidateKubeFedConfig(kubeFedConfig, oldKubeFedConfig *v1beta1.KubeFedConfi
 			}
 			existingNames[gate.Name] = true
 
-			allErrs = append(allErrs, validateEnumStrings(gatesPath.Child("name"), string(gate.Name),
+			allErrs = append(allErrs, validateEnumStrings(gatesPath.Child("name"), gate.Name,
 				[]string{string(features.PushReconciler), string(features.RawResourceStatusCollection), string(features.SchedulerPreferences)})...)
 
 			allErrs = append(allErrs, validateEnumStrings(gatesPath.Child("configuration"), string(gate.Configuration),

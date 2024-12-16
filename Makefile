@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/kubernetes-multicluster/kubefed:latest
+IMG ?= sit-registry.faw.cn/kubesphere/kubefed:latest
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -86,7 +86,7 @@ lint: ## Run golangci-lint check.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: ## Build docker image with the kubefed.
-	$(CONTAINER_TOOL) build -t ${IMG} build/kubefed/Dockerfile .
+	$(CONTAINER_TOOL) build -t ${IMG} -f build/kubefed/Dockerfile .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the kubefed.
@@ -126,10 +126,11 @@ generate: generate-code build ## Generate the kubefedctl and generate-code.
 
 .PHONY: clean
 clean: ## Clean all the binaries.
-	rm -f $(ALL_BINS)
-	$(DOCKER) rmi $(IMAGE):$(GIT_VERSION) || true
+	@if [ -d "bin" ];then rm -rf bin; fi
+	$(CONTAINER_TOOL) rmi ${IMG}
 
-controller-gen:
+.PHONY: controller-gen
+controller-gen: ## Install the controller-gen tool.
 	command -v controller-gen &> /dev/null || (cd tools && go install sigs.k8s.io/controller-tools/cmd/controller-gen)
 
 .PHONY: deploy.kind
