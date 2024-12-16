@@ -55,14 +55,18 @@ import (
 )
 
 const (
-	metricsDefaultBindAddress = ":9090"
-	healthzDefaultBindAddress = ":8080"
+	MetricsDefaultBindAddress = ":9090"
+	HealthzDefaultBindAddress = ":8080"
 )
 
 var (
-	kubeconfig, kubeFedConfig, masterURL, metricsAddr, healthzAddr string
-	restConfigQPS                                                  float32
-	restConfigBurst                                                int
+	kubeconfig      string
+	kubeFedConfig   string
+	masterURL       string
+	metricsAddr     string
+	healthzAddr     string
+	restConfigQPS   float32
+	restConfigBurst int
 )
 
 // NewControllerManagerCommand creates a *cobra.Command object with default parameters
@@ -73,7 +77,7 @@ func NewControllerManagerCommand(stopChan <-chan struct{}) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "controller-manager",
 		Long: `The KubeFed controller manager runs a bunch of controllers
-which watch KubeFed CRD's and the corresponding resources in
+which watch KubeFed CRDs and the corresponding resources in
 member clusters and do the necessary reconciliation`,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stdout, "KubeFed controller-manager version: %#v\n", version.Get())
@@ -91,8 +95,8 @@ member clusters and do the necessary reconciliation`,
 
 	flags := cmd.Flags()
 	opts.AddFlags(flags)
-	flags.StringVar(&healthzAddr, "healthz-addr", healthzDefaultBindAddress, "The address the healthz endpoint binds to.")
-	flags.StringVar(&metricsAddr, "metrics-addr", metricsDefaultBindAddress, "The address the metric endpoint binds to.")
+	flags.StringVar(&healthzAddr, "healthz-addr", HealthzDefaultBindAddress, "The address the healthz endpoint binds to.")
+	flags.StringVar(&metricsAddr, "metrics-addr", MetricsDefaultBindAddress, "The address the metric endpoint binds to.")
 	flags.BoolVar(&verFlag, "version", false, "Prints the Version info of controller-manager.")
 	flags.StringVar(&kubeFedConfig, "kubefed-config", "", "Path to a KubeFedConfig yaml file. Test only.")
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")

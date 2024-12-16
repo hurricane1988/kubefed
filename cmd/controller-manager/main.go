@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	_ "sigs.k8s.io/controller-runtime/pkg/metrics" // for workqueue metrics registration
+	_ "sigs.k8s.io/controller-runtime/pkg/metrics" // for work queue metrics registration
 
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Load all client auth plugins for GCP, Azure, Openstack, etc
@@ -31,7 +31,12 @@ import (
 
 // Controller-manager main.
 func main() {
+	// The core code for initializing logs using logs.InitLogs() sets up the configuration for klog by invoking
+	// klog.InitFlags(nil) or a similar initialization method.
+	// It relies on the functionality provided by the klog library at its core.
 	logs.InitLogs()
+	// It is used to ensure that all log data is written to the target output (such as files or standard output)
+	// when the program exits.It is typically used in conjunction with InitLogs() to prevent log loss.
 	defer logs.FlushLogs()
 
 	stopChan := genericapiserver.SetupSignalHandler()
