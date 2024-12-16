@@ -35,7 +35,7 @@ COPY --from=builder /tmp/ /hyperfed/
 
 RUN ln -s hyperfed controller-manager \
  && ln -s hyperfed kubefedctl \
- && ln -s hyperfed webhook \
+ && ln -s hyperfed webhook
 
 # Change ownership of the directory to the non-root user
 RUN chown -R hyperfed:hyperfed /hyperfed
