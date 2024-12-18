@@ -80,6 +80,7 @@ type ResourceLockType string
 const (
 	ConfigMapsResourceLock ResourceLockType = "configmaps"
 	EndpointsResourceLock  ResourceLockType = "endpoints"
+	LeasesResourceLock     ResourceLockType = "leases"
 )
 
 type FeatureGatesConfig struct {

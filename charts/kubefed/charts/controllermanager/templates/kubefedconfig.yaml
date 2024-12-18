@@ -13,7 +13,7 @@ spec:
     leaseDuration: {{ .Values.leaderElectLeaseDuration | default "15s" | quote }}
     renewDeadline: {{ .Values.leaderElectRenewDeadline | default "10s" | quote }}
     retryPeriod: {{ .Values.leaderElectRetryPeriod | default "5s" | quote }}
-    resourceLock: {{ .Values.leaderElectResourceLock | default "configmaps" | quote }}
+    resourceLock: {{ .Values.leaderElectResourceLock | default "leases" | quote }}
   clusterHealthCheck:
     period: {{ .Values.clusterHealthCheckPeriod | default "10s" | quote }}
     failureThreshold: {{ .Values.clusterHealthCheckFailureThreshold | default 3 }}

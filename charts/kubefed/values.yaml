@@ -16,7 +16,7 @@ controllermanager:
   clusterHealthCheckFailureThreshold:
   clusterHealthCheckSuccessThreshold:
   clusterHealthCheckTimeout:
-  ## Supported options are `configmaps` and `endpoints`
+  ## Supported options are `leases`, `configmaps` and `endpoints`
   leaderElectResourceLock:
   syncController:
     maxConcurrentReconciles:

@@ -311,7 +311,7 @@ func ValidateKubeFedConfig(kubeFedConfig, oldKubeFedConfig *v1beta1.KubeFedConfi
 			allErrs = append(allErrs, field.Required(resourceLockPath, ""))
 		} else {
 			allErrs = append(allErrs, validateEnumStrings(resourceLockPath, string(*elect.ResourceLock),
-				[]string{string(v1beta1.ConfigMapsResourceLock), string(v1beta1.EndpointsResourceLock)})...)
+				[]string{string(v1beta1.ConfigMapsResourceLock), string(v1beta1.EndpointsResourceLock), string(v1beta1.LeasesResourceLock)})...)
 		}
 	}
 
