@@ -68,6 +68,16 @@ rules:
   - create
   - update
   - patch
+- apiGroups:
+    - coordination.k8s.io
+  resources:
+    - leases
+  verbs:
+    - get
+    - watch
+    - list
+    - update
+    - patch
 {{- end }}
 ---
 # This role provides the necessary permissions to create admission reviews.
