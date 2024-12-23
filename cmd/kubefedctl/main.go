@@ -20,6 +20,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sigs.k8s.io/kubefed/pkg/version"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Load all client auth plugins for GCP, Azure, Openstack, etc
 	"k8s.io/component-base/logs"
@@ -31,6 +32,8 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
+	// Print the terminal information.
+	version.Term()
 	if err := kubefedctl.NewKubeFedCtlCommand(os.Stdout).Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1) //nolint:gocritic

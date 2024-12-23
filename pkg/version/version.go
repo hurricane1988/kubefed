@@ -18,7 +18,9 @@ package version
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"runtime"
+	"sigs.k8s.io/kubefed/pkg/constants"
 )
 
 type Info struct {
@@ -29,6 +31,8 @@ type Info struct {
 	GoVersion    string `json:"goVersion"`
 	Compiler     string `json:"compiler"`
 	Platform     string `json:"platform"`
+	RuntimeCores int    `json:"RuntimeCores"`
+	TotalMem     int    `json:"TotalMem"`
 }
 
 // Get returns the overall codebase version. It's for detecting
@@ -36,13 +40,41 @@ type Info struct {
 func Get() Info {
 	// These variables typically come from -ldflags settings and in
 	// their absence fallback to the settings in pkg/version/base.go
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
 	return Info{
-		Version:      version,
-		GitCommit:    gitCommit,
+		Version:      constants.DefaultVersion,
+		GitCommit:    constants.DefaultGitCommit,
 		GitTreeState: gitTreeState,
-		BuildDate:    buildDate,
+		BuildDate:    constants.DefaultBuildDate,
 		GoVersion:    runtime.Version(),
 		Compiler:     runtime.Compiler,
 		Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+		RuntimeCores: runtime.NumCPU(),
+		TotalMem:     int(memStats.TotalAlloc / 1024),
 	}
+}
+
+var (
+	Yellow       = color.New(color.FgHiYellow, color.Bold).SprintFunc()
+	YellowItalic = color.New(color.FgHiYellow, color.Bold, color.Italic).SprintFunc()
+	Green        = color.New(color.FgHiGreen, color.Bold).SprintFunc()
+	Blue         = color.New(color.FgHiBlue, color.Bold).SprintFunc()
+	Cyan         = color.New(color.FgCyan, color.Bold, color.Underline).SprintFunc()
+	Red          = color.New(color.FgHiRed, color.Bold).SprintFunc()
+	White        = color.New(color.FgWhite).SprintFunc()
+	WhiteBold    = color.New(color.FgWhite, color.Bold).SprintFunc()
+	forceDetail  = "yaml"
+)
+
+// Term Print the terminal
+func Term() string {
+	return fmt.Sprint(Blue(`
+╭━╮╭━╮╱╱╭╮╭╮╱╱╱╱╭━━━┳╮╱╱╱╱╱╱╭╮╱╱╱╱╱╱╱╭╮╭━╮╱╱╭╮╱╱╱╱╱╭━╮╱╱╱╱╭╮
+┃┃╰╯┃┃╱╱┃┣╯╰╮╱╱╱┃╭━╮┃┃╱╱╱╱╱╭╯╰╮╱╱╱╱╱╱┃┃┃╭╯╱╱┃┃╱╱╱╱╱┃╭╯╱╱╱╱┃┃
+┃╭╮╭╮┣╮╭┫┣╮╭╋╮╱╱┃┃╱╰┫┃╭╮╭┳━┻╮╭╋━━┳━╮╱┃╰╯╯╭╮╭┫╰━┳━━┳╯╰┳━━┳━╯┃
+┃┃┃┃┃┃┃┃┃┃┃┃┣╋━━┫┃╱╭┫┃┃┃┃┃━━┫┃┃┃━┫╭┻━┫╭╮┃┃┃┃┃╭╮┃┃━╋╮╭┫┃━┫╭╮┃
+┃┃┃┃┃┃╰╯┃╰┫╰┫┣━━┫╰━╯┃╰┫╰╯┣━━┃╰┫┃━┫┣━━┫┃┃╰┫╰╯┃╰╯┃┃━┫┃┃┃┃━┫╰╯┃
+╰╯╰╯╰┻━━┻━┻━┻╯╱╱╰━━━┻━┻━━┻━━┻━┻━━┻╯╱╱╰╯╰━┻━━┻━━┻━━╯╰╯╰━━┻━━╯
+`))
 }

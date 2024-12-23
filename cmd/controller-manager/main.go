@@ -27,6 +27,7 @@ import (
 	"k8s.io/component-base/logs"
 
 	"sigs.k8s.io/kubefed/cmd/controller-manager/app"
+	"sigs.k8s.io/kubefed/pkg/version"
 )
 
 // Controller-manager main.
@@ -40,6 +41,9 @@ func main() {
 	defer logs.FlushLogs()
 
 	stopChan := genericapiserver.SetupSignalHandler()
+
+	// Print the terminal information.
+	version.Term()
 
 	if err := app.NewControllerManagerCommand(stopChan).Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
