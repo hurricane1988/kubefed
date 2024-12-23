@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sigs.k8s.io/kubefed/pkg/version"
 
 	_ "sigs.k8s.io/controller-runtime/pkg/metrics" // for work queue metrics registration
 
@@ -27,11 +28,12 @@ import (
 	"k8s.io/component-base/logs"
 
 	"sigs.k8s.io/kubefed/cmd/controller-manager/app"
-	"sigs.k8s.io/kubefed/pkg/version"
 )
 
 // Controller-manager main.
 func main() {
+	// Print the terminal information.
+	fmt.Println(version.Term())
 	// The core code for initializing logs using logs.InitLogs() sets up the configuration for klog by invoking
 	// klog.InitFlags(nil) or a similar initialization method.
 	// It relies on the functionality provided by the klog library at its core.
@@ -41,9 +43,6 @@ func main() {
 	defer logs.FlushLogs()
 
 	stopChan := genericapiserver.SetupSignalHandler()
-
-	// Print the terminal information.
-	version.Term()
 
 	if err := app.NewControllerManagerCommand(stopChan).Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)

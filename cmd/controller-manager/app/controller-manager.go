@@ -99,7 +99,7 @@ member clusters and do the necessary reconciliation`,
 	opts.AddFlags(flags)
 	flags.StringVar(&healthzAddr, "healthz-addr", HealthzDefaultBindAddress, "The address the healthz endpoint binds to.")
 	flags.StringVar(&metricsAddr, "metrics-addr", MetricsDefaultBindAddress, "The address the metric endpoint binds to.")
-	flags.BoolVar(&verFlag, "version", true, "Prints the Version info of controller-manager.")
+	flags.BoolVar(&verFlag, "version", false, "Prints the Version info of controller-manager.")
 	flags.StringVar(&kubeFedConfig, "kubefed-config", "", "Path to a KubeFedConfig yaml file. Test only.")
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flags.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
