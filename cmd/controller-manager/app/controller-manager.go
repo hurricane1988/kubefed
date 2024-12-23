@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"strings"
 
@@ -40,6 +41,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/component-base/logs"
 	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/kubefed/cmd/controller-manager/app/leaderelection"
 	"sigs.k8s.io/kubefed/cmd/controller-manager/app/options"
 	corev1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
@@ -115,6 +117,9 @@ member clusters and do the necessary reconciliation`,
 func Run(opts *options.Options, stopChan <-chan struct{}) error {
 	logs.InitLogs()
 	defer logs.FlushLogs()
+
+	// Initialize the controller-runtime logger
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	var err error
 	opts.Config.KubeConfig, err = clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
