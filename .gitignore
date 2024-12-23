@@ -13,3 +13,4 @@
 
 # macOS paraphernalia
 .DS_Store
+./Makefile

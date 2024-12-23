@@ -37,13 +37,13 @@ trap 'logEnd $?' EXIT
 
 echo "About to download some binaries. This might take a while..."
 
-root_dir="$(cd "$(dirname "$0")/.." ; pwd)"
+root_dir="$(pwd)"
 dest_dir="${root_dir}/bin"
 mkdir -p "${dest_dir}"
 
 platform=$(uname -s|tr A-Z a-z)
 
-kb_version="2.3.1"
+kb_version="3.14.0"
 kb_tgz="kubebuilder_${kb_version}_${platform}_amd64.tar.gz"
 kb_url="https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${kb_version}/${kb_tgz}"
 curl "${curl_args}" "${kb_url}" \
@@ -54,13 +54,13 @@ source <(setup-envtest use -p env 1.24.x)
 
 echo "KUBEBUILDER_ASSETS is set to ${KUBEBUILDER_ASSETS}"
 
-helm_version="3.6.0"
+helm_version="3.10.0"
 helm_tgz="helm-v${helm_version}-${platform}-amd64.tar.gz"
 helm_url="https://get.helm.sh/$helm_tgz"
 curl "${curl_args}" "${helm_url}" \
     | tar xzP -C "${dest_dir}" --strip-components=1 "${platform}-amd64/helm"
 
-kubectl_version="v1.21.14"
+kubectl_version="v1.24.17"
 curl -Lo "${dest_dir}/kubectl" "https://dl.k8s.io/release/${kubectl_version}/bin/${platform}/amd64/kubectl"
 (cd "${dest_dir}" && \
  echo "$(curl -L "https://dl.k8s.io/release/${kubectl_version}/bin/${platform}/amd64/kubectl.sha256")  kubectl" | \
@@ -68,11 +68,11 @@ curl -Lo "${dest_dir}/kubectl" "https://dl.k8s.io/release/${kubectl_version}/bin
 )
 chmod +x "${dest_dir}/kubectl"
 
-kubebuilder_version="2.3.2"
+kubebuilder_version="3.14.0"
 curl -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${kubebuilder_version}/kubebuilder_${kubebuilder_version}_${platform}_amd64.tar.gz | \
   tar xzP -C "${dest_dir}" --strip-components=2 -- "kubebuilder_${kubebuilder_version}_${platform}_amd64/bin/kubebuilder"
 
-golint_version="1.40.1"
+golint_version="1.62.2"
 golint_dir="golangci-lint-${golint_version}-${platform}-amd64"
 golint_tgz="${golint_dir}.tar.gz"
 golint_url="https://github.com/golangci/golangci-lint/releases/download/v${golint_version}/${golint_tgz}"
@@ -80,7 +80,7 @@ curl "${curl_args}" "${golint_url}" \
     | tar xzP -C "${dest_dir}" --strip-components=1 "${golint_dir}/golangci-lint"
 
 # Install go-bindata tool
-pushd ${root_dir}/tools
+pushd "${root_dir}"/tools
 GOBIN=${dest_dir} go install github.com/go-bindata/go-bindata/v3/go-bindata
 popd
 

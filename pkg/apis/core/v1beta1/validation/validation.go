@@ -39,6 +39,10 @@ import (
 	"sigs.k8s.io/kubefed/pkg/features"
 )
 
+const (
+	federatedTypeConfigNameErrorMsg string = "name must be 'TARGET_PLURAL_NAME(.TARGET_GROUP_NAME)'"
+)
+
 func ValidateFederatedTypeConfig(obj *v1beta1.FederatedTypeConfig, statusSubResource bool) field.ErrorList {
 	var allErrs field.ErrorList
 	if !statusSubResource {
@@ -49,8 +53,6 @@ func ValidateFederatedTypeConfig(obj *v1beta1.FederatedTypeConfig, statusSubReso
 	}
 	return allErrs
 }
-
-const federatedTypeConfigNameErrorMsg string = "name must be 'TARGET_PLURAL_NAME(.TARGET_GROUP_NAME)'"
 
 func ValidateFederatedTypeConfigName(obj *v1beta1.FederatedTypeConfig) field.ErrorList {
 	expectedName := typeconfig.GroupQualifiedName(obj.GetTargetType())
@@ -126,6 +128,7 @@ func ValidateAPIResource(obj *v1beta1.APIResource, fldPath *field.Path) field.Er
 	return allErrs
 }
 
+// 验证一个字符串值是否符合枚举约束规则。它检查输入的 value 是否属于指定的合法字符串列表 accepted
 func validateEnumStrings(fldPath *field.Path, value string, accepted []string) field.ErrorList {
 	if value == "" {
 		return field.ErrorList{field.Required(fldPath, "")}
@@ -269,6 +272,9 @@ func ValidateKubeFedConfig(kubeFedConfig, oldKubeFedConfig *v1beta1.KubeFedConfi
 	allErrs := field.ErrorList{}
 
 	spec := kubeFedConfig.Spec
+	// field.NewPath 用于构建一个字段路径对象，表示 Kubernetes API 中资源的某个字段路径
+	// specPath 是一个 *field.Path 类型的变量，用于描述 spec 字段的路径信息
+	// field.Path 常在验证函数中配合 field.Error 使用
 	specPath := field.NewPath("spec")
 	allErrs = append(allErrs, validateEnumStrings(specPath.Child("scope"), string(spec.Scope),
 		[]string{string(apiextv1.ClusterScoped), string(apiextv1.NamespaceScoped)})...)

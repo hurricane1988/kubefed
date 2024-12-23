@@ -92,7 +92,7 @@ func CrdForAPIResource(apiResource metav1.APIResource, validation *apiextv1.Cust
 }
 
 func LookupAPIResource(config *rest.Config, key, targetVersion string) (*metav1.APIResource, error) {
-	errs := []error{}
+	var errs []error
 	resourceLists, err := GetServerPreferredResources(config)
 	if err != nil {
 		errs = append(errs, err)

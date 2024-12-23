@@ -22,7 +22,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")/.." ; pwd)"
+ROOT_DIR="$(pwd)"
 
 cd "${ROOT_DIR}"
 
