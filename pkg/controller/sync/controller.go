@@ -54,7 +54,7 @@ import (
 const (
 	allClustersKey = "ALL_CLUSTERS"
 
-	// If this finalizer is present on a federated resource, the sync
+	// FinalizerSyncController If this finalizer is present on a federated resource, the sync
 	// controller will have the opportunity to perform pre-deletion operations
 	// (like deleting managed resources from member clusters).
 	FinalizerSyncController = "kubefed.io/sync-controller"
