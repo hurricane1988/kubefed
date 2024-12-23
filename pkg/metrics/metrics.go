@@ -17,12 +17,11 @@ limitations under the License.
 package metrics
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 var (
@@ -142,13 +141,9 @@ const (
 	ClusterOffline  = "offline"
 )
 
-// RegisterAll registers all metrics.
 func RegisterAll() {
 	metrics.Registry.MustRegister(
-		// expose process metrics like CPU, Memory, file descriptor usage etc.
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		// expose Go runtime metrics like GC stats, memory stats etc.
-		collectors.NewGoCollector(),
+		// Register custom metrics
 		kubefedClusterTotal,
 		joinedClusterTotal,
 		reconcileFederatedResourcesDuration,
@@ -159,11 +154,6 @@ func RegisterAll() {
 		dispatchOperationDuration,
 		controllerRuntimeReconcileDuration,
 		controllerRuntimeReconcileDurationSummary,
-		ControllerRuntimeReconcileTotal,
-		ControllerRuntimeReconcileErrors,
-		ControllerRuntimeReconcileTime,
-		ControllerRuntimeWorkerCount,
-		ControllerRuntimeActiveWorkers,
 	)
 }
 

@@ -3,8 +3,11 @@ package app
 import (
 	"flag"
 	"fmt"
+	"github.com/spf13/pflag"
 	"net/http"
 	"os"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/tools/clientcmd"
@@ -42,7 +45,7 @@ func NewWebhookCommand(stopChan <-chan struct{}) *cobra.Command {
 			if verFlag {
 				os.Exit(0)
 			}
-			// PrintFlags(cmd.Flags())
+			PrintFlags(cmd.Flags())
 
 			if err := Run(stopChan); err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -51,15 +54,15 @@ func NewWebhookCommand(stopChan <-chan struct{}) *cobra.Command {
 		},
 	}
 
-	// Add the command line flags from other dependencies(klog, kubebuilder, etc.)
-	cmd.Flags().AddGoFlagSet(flag.CommandLine)
-
-	cmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	cmd.Flags().StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
-	cmd.Flags().StringVar(&certDir, "cert-dir", "", "The directory where the TLS certs are located.")
-	cmd.Flags().IntVar(&port, "secure-port", port, "The port on which to serve HTTPS.")
-	cmd.Flags().BoolVar(&verFlag, "version", false, "Prints the Version info of webhook.")
-
+	flags := cmd.Flags()
+	flags.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	flags.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	flags.StringVar(&certDir, "cert-dir", "", "The directory where the TLS certs are located.")
+	flags.IntVar(&port, "secure-port", port, "The port on which to serve HTTPS.")
+	flags.BoolVar(&verFlag, "version", false, "Prints the Version info of webhook.")
+	local := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	klog.InitFlags(local)
+	flags.AddGoFlagSet(local)
 	return cmd
 }
 
@@ -67,6 +70,9 @@ func NewWebhookCommand(stopChan <-chan struct{}) *cobra.Command {
 func Run(stopChan <-chan struct{}) error {
 	logs.InitLogs()
 	defer logs.FlushLogs()
+
+	// Initialize the controller-runtime logger
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	config, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
@@ -99,4 +105,11 @@ func Run(stopChan <-chan struct{}) error {
 	}
 
 	return nil
+}
+
+// PrintFlags logs the flags in the flagset
+func PrintFlags(flags *pflag.FlagSet) {
+	flags.VisitAll(func(flag *pflag.Flag) {
+		klog.V(1).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
+	})
 }
