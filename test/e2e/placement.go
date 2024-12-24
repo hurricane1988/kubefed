@@ -37,7 +37,8 @@ import (
 
 var _ = Describe("Placement", func() {
 	f := framework.NewKubeFedFramework("placement")
-
+	ctx := context.Background()
+	immediate := false
 	tl := framework.NewE2ELogger()
 
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)
@@ -89,9 +90,9 @@ var _ = Describe("Placement", func() {
 			return targetObject, nil, err
 		}
 		crudTester, desiredTargetObject, _ := initCrudTest(f, tl, f.KubeFedSystemNamespace(), selectedTypeConfig, testObjectsFunc)
-		fedObject := crudTester.CheckCreate(desiredTargetObject, nil, nil)
+		fedObject := crudTester.CheckCreate(ctx, immediate, desiredTargetObject, nil, nil)
 		defer func() {
-			crudTester.CheckDelete(fedObject, false)
+			crudTester.CheckDelete(ctx, immediate, fedObject, false)
 		}()
 
 		// Wait until pending events for the templates have cleared

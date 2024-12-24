@@ -23,11 +23,13 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// ResourceClient Define the dynamic client interface.
 type ResourceClient interface {
 	Resources(namespace string) dynamic.ResourceInterface
 	Kind() string
 }
 
+// Define the dynamic client struct.
 type resourceClient struct {
 	client      dynamic.Interface
 	apiResource schema.GroupVersionResource
@@ -35,6 +37,7 @@ type resourceClient struct {
 	kind        string
 }
 
+// NewResourceClient The dynamic client.
 func NewResourceClient(config *rest.Config, apiResource *metav1.APIResource) (ResourceClient, error) {
 	resource := schema.GroupVersionResource{
 		Group:    apiResource.Group,
@@ -65,6 +68,12 @@ func (c *resourceClient) Resources(namespace string) dynamic.ResourceInterface {
 	return c.client.Resource(c.apiResource)
 }
 
+// Kind Get the kind of resource.
 func (c *resourceClient) Kind() string {
 	return c.kind
+}
+
+// ApiVersion Get the apiServer of resource.
+func (c *resourceClient) ApiVersion() string {
+	return c.ApiVersion()
 }

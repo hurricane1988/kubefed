@@ -59,7 +59,8 @@ import (
 var _ = Describe("[NOT_READY] Simulated not-ready nodes", func() {
 	baseName := "unhealthy-test"
 	f := framework.NewKubeFedFramework(baseName)
-
+	ctx := context.Background()
+	immediate := false
 	tl := framework.NewE2ELogger()
 
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)
@@ -192,9 +193,9 @@ var _ = Describe("[NOT_READY] Simulated not-ready nodes", func() {
 			return targetObject, nil, err
 		}
 		crudTester, targetObject, overrides := initCrudTestWithPropagation(f, tl, hostNamespace, typeConfig, testObjectsFunc, false)
-		fedObject := crudTester.CheckCreate(targetObject, overrides, map[string]string{"healthy": "true"})
-		crudTester.CheckStatusCreated(util.NewQualifiedName(fedObject))
-		crudTester.CheckUpdate(fedObject)
-		crudTester.CheckDelete(fedObject, false)
+		fedObject := crudTester.CheckCreate(ctx, immediate, targetObject, overrides, map[string]string{"healthy": "true"})
+		crudTester.CheckStatusCreated(ctx, immediate, util.NewQualifiedName(fedObject))
+		crudTester.CheckUpdate(ctx, immediate, fedObject)
+		crudTester.CheckDelete(ctx, immediate, fedObject, false)
 	})
 })

@@ -67,7 +67,8 @@ import (
 var _ = Describe("Simulated Scale", func() {
 	baseName := "scale-test"
 	f := framework.NewKubeFedFramework(baseName)
-
+	ctx := context.Background()
+	immediate := false
 	tl := framework.NewE2ELogger()
 
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)
@@ -100,7 +101,7 @@ var _ = Describe("Simulated Scale", func() {
 		// cluster.
 		nameToken := strings.TrimPrefix(hostCluster, generateName)
 		hostConfig := f.KubeConfig()
-		memberClusters := []string{}
+		var memberClusters []string
 		for i := 0; i < framework.TestContext.ScaleClusterCount; i++ {
 			memberCluster := fmt.Sprintf("scale-member-%d-%s", i, nameToken)
 			memberClusters = append(memberClusters, memberCluster)
@@ -280,7 +281,7 @@ var _ = Describe("Simulated Scale", func() {
 			return targetObject, nil, err
 		}
 		crudTester, targetObject, overrides := initCrudTestWithPropagation(f, tl, f.KubeFedSystemNamespace(), typeConfig, testObjectsFunc, false)
-		crudTester.CheckLifecycle(targetObject, overrides, nil)
+		crudTester.CheckLifecycle(ctx, immediate, targetObject, overrides, nil)
 
 		// Delete clusters to minimize errors logged by the cluster
 		// controller.

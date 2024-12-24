@@ -484,8 +484,8 @@ func CreateFederatedResource(hostConfig *rest.Config, typeConfig typeconfig.Inte
 	if !dryRun {
 		// It might take a little while for the federated type to appear if the
 		// same is being enabled while or immediately before federating the resource.
-		err = wait.PollImmediate(createResourceRetryInterval, createResourceRetryTimeout, func() (bool, error) {
-			_, err := fedClient.Resources(federatedResource.GetNamespace()).Create(context.Background(), federatedResource, metav1.CreateOptions{})
+		err = wait.PollUntilContextTimeout(context.Background(), createResourceRetryInterval, createResourceRetryTimeout, false, func(ctx context.Context) (done bool, err error) {
+			_, err = fedClient.Resources(federatedResource.GetNamespace()).Create(context.Background(), federatedResource, metav1.CreateOptions{})
 			if apierrors.IsNotFound(err) {
 				return false, nil
 			}
@@ -509,7 +509,7 @@ func GetContainedArtifactsList(hostConfig *rest.Config, containerNamespace, kube
 		return nil, err
 	}
 
-	artifactsList := []*FederateArtifacts{}
+	var artifactsList []*FederateArtifacts
 	for _, targetResources := range targetResourcesList {
 		apiResource := targetResources.apiResource
 		typeConfigInstalled, typeConfig, err := getTypeConfig(hostConfig, apiResource, kubefedNamespace, enableType, outputYAML)

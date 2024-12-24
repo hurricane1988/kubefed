@@ -51,12 +51,12 @@ higher-level APIs:
 
 ## Features
 
-| Feature | Maturity | Feature Gate | Default |
-|---------|----------|--------------|---------|
-| [Push propagation of arbitrary types to remote clusters](https://github.com/kubernetes-sigs/kubefed/blob/master/docs/userguide.md#verify-your-deployment-is-working) | Alpha | PushReconciler | true |
-| [CLI utility (`kubefedctl`)](https://github.com/kubernetes-sigs/kubefed/blob/master/docs/userguide.md#kubefedctl-cli) | Alpha | | |
-| [Generate KubeFed APIs without writing code](https://github.com/kubernetes-sigs/kubefed/blob/master/docs/userguide.md#enabling-federation-of-an-api-type) | Alpha | | |
-| [Replica Scheduling Preferences](https://github.com/kubernetes-sigs/kubefed/blob/master/docs/userguide.md#replicaschedulingpreference) | Alpha | SchedulerPreferences | true |
+| Feature                                                                                                         | Maturity | Feature Gate | Default |
+|-----------------------------------------------------------------------------------------------------------------|----------|--------------|---------|
+| [Push propagation of arbitrary types to remote clusters](./docs/userguide.md#verify-your-deployment-is-working) | Alpha | PushReconciler | true |
+| [CLI utility (`kubefedctl`)](./docs/userguide.md#kubefedctl-cli)                                                | Alpha | | |
+| [Generate KubeFed APIs without writing code](./docs/userguide.md#enabling-federation-of-an-api-type)            | Alpha | | |
+| [Replica Scheduling Preferences](./docs/userguide.md#replicaschedulingpreference)                               | Alpha | SchedulerPreferences | true |
 
 ## Guides
 

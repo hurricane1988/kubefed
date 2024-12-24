@@ -40,12 +40,13 @@ import (
 	"sigs.k8s.io/kubefed/test/common"
 	"sigs.k8s.io/kubefed/test/e2e/framework"
 
-	. "github.com/onsi/ginkgo" //nolint:stylecheck
+	. "github.com/onsi/ginkgo"
 )
 
 var _ = Describe("Federated CRD resources", func() {
 	f := framework.NewKubeFedFramework("crd-resources")
-
+	ctx := context.Background()
+	immediate := false
 	namespaceScoped := []bool{
 		true,
 		false,
@@ -71,14 +72,14 @@ var _ = Describe("Federated CRD resources", func() {
 				if !namespaced {
 					targetCrdKind = fmt.Sprintf("Cluster%s", targetCrdKind)
 				}
-				validateCrdCrud(f, targetCrdKind, namespaced)
+				validateCrdCrud(ctx, immediate, f, targetCrdKind, namespaced)
 			})
 		})
 	}
 
 })
 
-func validateCrdCrud(f framework.KubeFedFramework, targetCrdKind string, namespaced bool) {
+func validateCrdCrud(ctx context.Context, immediate bool, f framework.KubeFedFramework, targetCrdKind string, namespaced bool) {
 	tl := framework.NewE2ELogger()
 
 	targetAPIResource := metav1.APIResource{
@@ -127,7 +128,7 @@ func validateCrdCrud(f framework.KubeFedFramework, targetCrdKind string, namespa
 	}
 
 	targetName := targetAPIResource.Name
-	err := wait.PollImmediate(framework.PollInterval, framework.TestContext.SingleCallTimeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, framework.PollInterval, framework.TestContext.SingleCallTimeout, immediate, func(ctx context.Context) (bool, error) {
 		_, err := kfenable.LookupAPIResource(hostConfig, targetName, targetAPIResource.Version)
 		if err != nil {
 			tl.Logf("An error was reported while waiting for target type %q to be published as an available resource: %v", targetName, err)
@@ -166,7 +167,7 @@ func validateCrdCrud(f framework.KubeFedFramework, targetCrdKind string, namespa
 		// CRDs is attempted even if the removal of any one CRD fails.
 		objectMeta := typeConfig.GetObjectMeta()
 		qualifiedName := util.QualifiedName{Namespace: f.KubeFedSystemNamespace(), Name: objectMeta.Name}
-		err := kubefedctl.DisableFederation(nil, hostConfig, enableTypeDirective, qualifiedName, delete, dryRun, false)
+		err = kubefedctl.DisableFederation(nil, hostConfig, enableTypeDirective, qualifiedName, delete, dryRun, false)
 		if err != nil {
 			tl.Fatalf("Error disabling federation of target type %q: %v", targetAPIResource.Kind, err)
 		}
@@ -174,9 +175,9 @@ func validateCrdCrud(f framework.KubeFedFramework, targetCrdKind string, namespa
 
 	// Wait for the CRDs to become available in the API
 	for _, c := range configs {
-		waitForCrd(c, tl, typeConfig.GetTargetType())
+		waitForCrd(ctx, immediate, c, tl, typeConfig.GetTargetType())
 	}
-	waitForCrd(hostConfig, tl, typeConfig.GetFederatedType())
+	waitForCrd(ctx, immediate, hostConfig, tl, typeConfig.GetFederatedType())
 
 	// TODO(marun) If not using in-memory controllers, wait until the
 	// controller has started.
@@ -218,7 +219,7 @@ overrides:
 	crudTester, targetObject, overrides := initCrudTest(f, tl, f.KubeFedSystemNamespace(), typeConfig, testObjectsFunc)
 	// Make a copy for use in the orphan check.
 	deletionTargetObject := targetObject.DeepCopy()
-	crudTester.CheckLifecycle(targetObject, overrides, nil)
+	crudTester.CheckLifecycle(ctx, immediate, targetObject, overrides, nil)
 
 	if namespaced {
 		// This check should not fail so long as the main test loop
@@ -228,18 +229,18 @@ overrides:
 			tl.Fatalf("Test of orphaned deletion assumes deletion of the containing namespace")
 		}
 		// Perform a check of orphan deletion.
-		fedObject := crudTester.CheckCreate(deletionTargetObject, nil, nil)
+		fedObject := crudTester.CheckCreate(ctx, immediate, deletionTargetObject, nil, nil)
 		orphanDeletion := true
-		crudTester.CheckDelete(fedObject, orphanDeletion)
+		crudTester.CheckDelete(ctx, immediate, fedObject, orphanDeletion)
 	}
 }
 
-func waitForCrd(config *rest.Config, tl common.TestLogger, apiResource metav1.APIResource) {
+func waitForCrd(ctx context.Context, immediate bool, config *rest.Config, tl common.TestLogger, apiResource metav1.APIResource) {
 	client, err := util.NewResourceClient(config, &apiResource)
 	if err != nil {
 		tl.Fatalf("Error creating client for crd %q: %v", apiResource.Kind, err)
 	}
-	err = wait.PollImmediate(framework.PollInterval, framework.TestContext.SingleCallTimeout, func() (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx, framework.PollInterval, framework.TestContext.SingleCallTimeout, immediate, func(ctx context.Context) (bool, error) {
 		_, err := client.Resources("invalid").Get(context.Background(), "invalid", metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return true, nil

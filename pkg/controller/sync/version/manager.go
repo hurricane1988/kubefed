@@ -285,7 +285,7 @@ func (m *VersionManager) writeVersion(obj runtimeclient.Object, qualifiedName ut
 	refreshVersion := false
 	// TODO(marun) Centralize polling interval and duration
 	waitDuration := 30 * time.Second
-	err = wait.PollImmediate(100*time.Millisecond, waitDuration, func() (bool, error) {
+	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, waitDuration, false, func(ctx context.Context) (done bool, err error) {
 		if refreshVersion {
 			// Version was written to the API by another process after the last manager write.
 			var err error
@@ -336,7 +336,7 @@ func (m *VersionManager) writeVersion(obj runtimeclient.Object, qualifiedName ut
 		// Update the status of an existing object
 
 		updatedObj := obj.DeepCopyObject().(runtimeclient.Object)
-		err := setResourceVersion(updatedObj, resourceVersion)
+		err = setResourceVersion(updatedObj, resourceVersion)
 		if err != nil {
 			runtime.HandleError(errors.Wrapf(err, "Failed to set the resourceVeresion for %s %q", adapterType, key))
 			return false, nil

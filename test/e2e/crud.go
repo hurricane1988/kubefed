@@ -46,7 +46,8 @@ type testObjectsAccessor func(namespace string, clusterNames []string) (targetOb
 
 var _ = Describe("Federated", func() {
 	f := framework.NewKubeFedFramework("federated-types")
-
+	ctx := context.Background()
+	immediate := false
 	tl := framework.NewE2ELogger()
 
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)
@@ -62,7 +63,7 @@ var _ = Describe("Federated", func() {
 			It("should be created, read, updated and deleted successfully", func() {
 				typeConfig, testObjectsFunc := getCrudTestInput(f, tl, typeConfigName, fixture)
 				crudTester, targetObject, overrides := initCrudTest(f, tl, f.KubeFedSystemNamespace(), typeConfig, testObjectsFunc)
-				crudTester.CheckLifecycle(targetObject, overrides, nil)
+				crudTester.CheckLifecycle(ctx, immediate, targetObject, overrides, nil)
 			})
 
 			for _, remoteStatusTypeName := range containedTypeNames {
@@ -79,14 +80,14 @@ var _ = Describe("Federated", func() {
 
 						typeConfig, testObjectsFunc := getCrudTestInput(f, tl, typeConfigName, fixture)
 						crudTester, targetObject, overrides := initCrudTest(f, tl, f.KubeFedSystemNamespace(), typeConfig, testObjectsFunc)
-						fedObject := crudTester.CheckCreate(targetObject, overrides, nil)
+						fedObject := crudTester.CheckCreate(ctx, immediate, targetObject, overrides, nil)
 
 						By("Checking the remote status filled for each federated resource for every cluster")
 						tl.Logf("Checking the existence of a remote status for each fedObj in every cluster: %v", fedObject)
-						crudTester.CheckRemoteStatus(fedObject, targetObject)
+						crudTester.CheckRemoteStatus(ctx, immediate, fedObject, targetObject)
 
 						defer func() {
-							crudTester.CheckDelete(fedObject, false)
+							crudTester.CheckDelete(ctx, immediate, fedObject, false)
 						}()
 					})
 				}
@@ -116,7 +117,7 @@ var _ = Describe("Federated", func() {
 
 				By(fmt.Sprintf("Waiting until the status of the %s %q indicates NamespaceNotFederated", kind, qualifiedName))
 				client := genericclient.NewForConfigOrDie(f.KubeConfig())
-				err := wait.PollImmediate(framework.PollInterval, wait.ForeverTestTimeout, func() (bool, error) {
+				err := wait.PollUntilContextTimeout(ctx, framework.PollInterval, wait.ForeverTestTimeout, immediate, func(ctx context.Context) (bool, error) {
 					genericResource, err := common.GetGenericResource(client, fedObject.GroupVersionKind(), qualifiedName)
 					if err != nil {
 						tl.Fatalf("An error occurred retrieving the status of the %s %q: %v", kind, qualifiedName, err)
@@ -175,7 +176,7 @@ var _ = Describe("Federated", func() {
 				}()
 
 				By("Checking that the labeled resource is unlabeled by the sync controller")
-				err = wait.PollImmediate(framework.PollInterval, wait.ForeverTestTimeout, func() (bool, error) {
+				err = wait.PollUntilContextTimeout(ctx, framework.PollInterval, wait.ForeverTestTimeout, immediate, func(ctx context.Context) (bool, error) {
 					obj := &unstructured.Unstructured{}
 					obj.SetGroupVersionKind(labeledObj.GroupVersionKind())
 					err := clusterClient.Get(context.TODO(), obj, labeledObj.GetNamespace(), labeledObj.GetName())
@@ -222,7 +223,7 @@ var _ = Describe("Federated", func() {
 					}
 				}()
 
-				By("Intitializing a federated resource with placement excluding all clusters")
+				By("Initializing a federated resource with placement excluding all clusters")
 				fedObject, err := federate.FederatedResourceFromTargetResource(typeConfig, unlabeledObj)
 				if err != nil {
 					tl.Fatalf("Error generating federated resource: %v", err)

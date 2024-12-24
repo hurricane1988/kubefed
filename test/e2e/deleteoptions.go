@@ -17,6 +17,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	. "github.com/onsi/ginkgo" //nolint:stylecheck
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +30,8 @@ var typeConfigName = "deployments.apps"
 
 var _ = Describe("DeleteOptions", func() {
 	f := framework.NewKubeFedFramework("delete-options")
-
+	ctx := context.Background()
+	immediate := false
 	tl := framework.NewE2ELogger()
 
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)
@@ -37,20 +39,19 @@ var _ = Describe("DeleteOptions", func() {
 	fixture := typeConfigFixtures[typeConfigName]
 
 	It("Deployment should be created and deleted successfully, but ReplicaSet that created by Deployment won't be deleted", func() {
-
 		typeConfig, testObjectsFunc := getCrudTestInput(f, tl, typeConfigName, fixture)
 		crudTester, targetObject, overrides := initCrudTest(f, tl, f.KubeFedSystemNamespace(), typeConfig, testObjectsFunc)
-		fedObject := crudTester.CheckCreate(targetObject, overrides, nil)
+		fedObject := crudTester.CheckCreate(ctx, immediate, targetObject, overrides, nil)
 
 		By("Set PropagationPolicy property as 'Orphan' on the DeleteOptions for Federated Deployment")
 		orphan := metav1.DeletePropagationOrphan
 		prop := client.PropagationPolicy(orphan)
 
-		crudTester.SetDeleteOption(fedObject, prop)
+		crudTester.SetDeleteOption(ctx, immediate, fedObject, prop)
 
-		crudTester.CheckDelete(fedObject, false)
+		crudTester.CheckDelete(ctx, immediate, fedObject, false)
 
 		By("Checking ReplicatSet stutus for every cluster")
-		crudTester.CheckReplicaSet(targetObject)
+		crudTester.CheckReplicaSet(ctx, immediate, targetObject)
 	})
 })

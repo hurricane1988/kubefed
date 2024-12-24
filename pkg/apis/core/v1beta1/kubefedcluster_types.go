@@ -76,7 +76,7 @@ type KubeFedClusterStatus struct {
 	// Zones are the names of availability zones in which the nodes of the cluster exist, e.g. 'us-east1-a'.
 	// +optional
 	Zones []string `json:"zones,omitempty"`
-	// Region is the name of the region in which all of the nodes in the cluster exist.  e.g. 'us-east1'.
+	// Region is the name of the region in which all the nodes in the cluster exist.  e.g. 'us-east1'.
 	// +optional
 	Region *string `json:"region,omitempty"`
 }
@@ -114,7 +114,7 @@ type ClusterCondition struct {
 	// (brief) reason for the condition's last transition.
 	// +optional
 	Reason *string `json:"reason,omitempty"`
-	// Human readable message indicating details about last transition.
+	// Human-readable message indicating details about last transition.
 	// +optional
 	Message *string `json:"message,omitempty"`
 }
