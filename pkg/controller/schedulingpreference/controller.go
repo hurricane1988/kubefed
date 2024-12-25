@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/metrics"
 	"sigs.k8s.io/kubefed/pkg/schedulingtypes"
 )
@@ -48,7 +48,7 @@ const (
 type SchedulingPreferenceController struct {
 	// For triggering reconciliation of all scheduling resources. This
 	// is used when a new cluster becomes available.
-	clusterDeliverer *util.DelayingDeliverer
+	clusterDeliverer *utils.DelayingDeliverer
 
 	// scheduler holds all the information and functionality
 	// to handle the target objects of given type
@@ -59,7 +59,7 @@ type SchedulingPreferenceController struct {
 	// Informer for self
 	controller cache.Controller
 
-	worker util.ReconcileWorker
+	worker utils.ReconcileWorker
 
 	// For events
 	eventRecorder record.EventRecorder
@@ -70,7 +70,7 @@ type SchedulingPreferenceController struct {
 }
 
 // SchedulingPreferenceController starts a new controller for given type of SchedulingPreferences
-func StartSchedulingPreferenceController(config *util.ControllerConfig, schedulingType schedulingtypes.SchedulingType, stopChannel <-chan struct{}) (schedulingtypes.Scheduler, error) {
+func StartSchedulingPreferenceController(config *utils.ControllerConfig, schedulingType schedulingtypes.SchedulingType, stopChannel <-chan struct{}) (schedulingtypes.Scheduler, error) {
 	controller, err := newSchedulingPreferenceController(config, schedulingType)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func StartSchedulingPreferenceController(config *util.ControllerConfig, scheduli
 }
 
 // newSchedulingPreferenceController returns a new SchedulingPreference Controller for the given type
-func newSchedulingPreferenceController(config *util.ControllerConfig, schedulingType schedulingtypes.SchedulingType) (*SchedulingPreferenceController, error) {
+func newSchedulingPreferenceController(config *utils.ControllerConfig, schedulingType schedulingtypes.SchedulingType) (*SchedulingPreferenceController, error) {
 	userAgent := fmt.Sprintf("%s-controller", schedulingType.Kind)
 	kubeConfig := restclient.CopyConfig(config.KubeConfig)
 	restclient.AddUserAgent(kubeConfig, userAgent)
@@ -104,8 +104,8 @@ func newSchedulingPreferenceController(config *util.ControllerConfig, scheduling
 		eventRecorder:           recorder,
 	}
 
-	s.worker = util.NewReconcileWorker(strings.ToLower(schedulingType.Kind), s.reconcile, util.WorkerOptions{
-		WorkerTiming: util.WorkerTiming{
+	s.worker = utils.NewReconcileWorker(strings.ToLower(schedulingType.Kind), s.reconcile, utils.WorkerOptions{
+		WorkerTiming: utils.WorkerTiming{
 			ClusterSyncDelay: s.clusterAvailableDelay,
 		},
 	})
@@ -113,10 +113,10 @@ func newSchedulingPreferenceController(config *util.ControllerConfig, scheduling
 	eventHandlers := schedulingtypes.SchedulerEventHandlers{
 		KubeFedEventHandler: s.worker.EnqueueObject,
 		ClusterEventHandler: func(obj runtimeclient.Object) {
-			qualifiedName := util.NewQualifiedName(obj)
+			qualifiedName := utils.NewQualifiedName(obj)
 			s.worker.EnqueueForRetry(qualifiedName)
 		},
-		ClusterLifecycleHandlers: &util.ClusterLifecycleHandlerFuncs{
+		ClusterLifecycleHandlers: &utils.ClusterLifecycleHandlerFuncs{
 			ClusterAvailable: func(cluster *fedv1b1.KubeFedCluster) {
 				// When new cluster becomes available process all the target resources again.
 				s.clusterDeliverer.DeliverAt(allClustersKey, nil, time.Now().Add(s.clusterAvailableDelay))
@@ -134,13 +134,13 @@ func newSchedulingPreferenceController(config *util.ControllerConfig, scheduling
 	s.scheduler = scheduler
 
 	// Build deliverer for triggering cluster reconciliations.
-	s.clusterDeliverer = util.NewDelayingDeliverer()
+	s.clusterDeliverer = utils.NewDelayingDeliverer()
 
-	s.store, s.controller, err = util.NewGenericInformer(
+	s.store, s.controller, err = utils.NewGenericInformer(
 		kubeConfig,
 		config.TargetNamespace,
 		s.scheduler.ObjectType(),
-		util.NoResyncPeriod,
+		utils.NoResyncPeriod,
 		s.worker.EnqueueObject,
 	)
 	if err != nil {
@@ -162,7 +162,7 @@ func (s *SchedulingPreferenceController) Run(stopChan <-chan struct{}) {
 	go s.controller.Run(stopChan)
 	s.scheduler.Start()
 
-	s.clusterDeliverer.StartWithHandler(func(_ *util.DelayingDelivererItem) {
+	s.clusterDeliverer.StartWithHandler(func(_ *utils.DelayingDelivererItem) {
 		s.reconcileOnClusterChange()
 	})
 
@@ -188,16 +188,16 @@ func (s *SchedulingPreferenceController) reconcileOnClusterChange() {
 		s.clusterDeliverer.DeliverAt(allClustersKey, nil, time.Now().Add(s.clusterAvailableDelay))
 	}
 	for _, obj := range s.store.List() {
-		qualifiedName := util.NewQualifiedName(obj.(runtimeclient.Object))
+		qualifiedName := utils.NewQualifiedName(obj.(runtimeclient.Object))
 		s.worker.EnqueueWithDelay(qualifiedName, s.smallDelay)
 	}
 }
 
-func (s *SchedulingPreferenceController) reconcile(qualifiedName util.QualifiedName) util.ReconciliationStatus {
+func (s *SchedulingPreferenceController) reconcile(qualifiedName utils.QualifiedName) utils.ReconciliationStatus {
 	defer metrics.UpdateControllerReconcileDurationFromStart("schedulingpreferencecontroller", time.Now())
 
 	if !s.isSynced() {
-		return util.StatusNotSynced
+		return utils.StatusNotSynced
 	}
 
 	kind := s.scheduler.SchedulingKind()
@@ -211,11 +211,11 @@ func (s *SchedulingPreferenceController) reconcile(qualifiedName util.QualifiedN
 
 	obj, err := s.objFromCache(s.store, kind, key)
 	if err != nil {
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	}
 	if obj == nil {
 		// Nothing to do
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	}
 
 	return s.scheduler.Reconcile(obj, qualifiedName)

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 const (
@@ -44,28 +44,28 @@ const (
 )
 
 type Plugin struct {
-	targetInformer util.FederatedInformer
+	targetInformer utils.FederatedInformer
 
 	federatedStore      cache.Store
 	federatedController cache.Controller
 
-	federatedTypeClient util.ResourceClient
+	federatedTypeClient utils.ResourceClient
 
 	typeConfig   typeconfig.Interface
-	fedNsClient  util.ResourceClient
+	fedNsClient  utils.ResourceClient
 	limitedScope bool
 
 	stopChannel chan struct{}
 }
 
-func NewPlugin(controllerConfig *util.ControllerConfig, eventHandlers SchedulerEventHandlers, typeConfig typeconfig.Interface, nsAPIResource *metav1.APIResource) (*Plugin, error) {
+func NewPlugin(controllerConfig *utils.ControllerConfig, eventHandlers SchedulerEventHandlers, typeConfig typeconfig.Interface, nsAPIResource *metav1.APIResource) (*Plugin, error) {
 	targetAPIResource := typeConfig.GetTargetType()
 	userAgent := fmt.Sprintf("%s-replica-scheduler", strings.ToLower(targetAPIResource.Kind))
 	kubeConfig := restclient.CopyConfig(controllerConfig.KubeConfig)
 	restclient.AddUserAgent(kubeConfig, userAgent)
 	client := genericclient.NewForConfigOrDie(kubeConfig)
 
-	targetInformer, err := util.NewFederatedInformer(
+	targetInformer, err := utils.NewFederatedInformer(
 		controllerConfig,
 		client,
 		&targetAPIResource,
@@ -87,13 +87,13 @@ func NewPlugin(controllerConfig *util.ControllerConfig, eventHandlers SchedulerE
 	kubeFedEventHandler := eventHandlers.KubeFedEventHandler
 
 	federatedTypeAPIResource := typeConfig.GetFederatedType()
-	p.federatedTypeClient, err = util.NewResourceClient(kubeConfig, &federatedTypeAPIResource)
+	p.federatedTypeClient, err = utils.NewResourceClient(kubeConfig, &federatedTypeAPIResource)
 	if err != nil {
 		return nil, err
 	}
-	p.federatedStore, p.federatedController = util.NewResourceInformer(p.federatedTypeClient, targetNamespace, &federatedTypeAPIResource, kubeFedEventHandler)
+	p.federatedStore, p.federatedController = utils.NewResourceInformer(p.federatedTypeClient, targetNamespace, &federatedTypeAPIResource, kubeFedEventHandler)
 
-	p.fedNsClient, err = util.NewResourceClient(kubeConfig, nsAPIResource)
+	p.fedNsClient, err = utils.NewResourceClient(kubeConfig, nsAPIResource)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (p *Plugin) FederatedTypeExists(key string) bool {
 	return exist
 }
 
-func (p *Plugin) GetResourceClusters(qualifiedName util.QualifiedName, clusters []*fedv1b1.KubeFedCluster) (selectedClusters sets.Set[string], err error) {
+func (p *Plugin) GetResourceClusters(qualifiedName utils.QualifiedName, clusters []*fedv1b1.KubeFedCluster) (selectedClusters sets.Set[string], err error) {
 	fedObject, err := p.federatedTypeClient.Resources(qualifiedName.Namespace).Get(context.Background(), qualifiedName.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -159,12 +159,12 @@ func (p *Plugin) GetResourceClusters(qualifiedName util.QualifiedName, clusters 
 	}
 
 	if p.typeConfig.GetNamespaced() {
-		return util.ComputeNamespacedPlacement(fedObject, fedNsObject, clusters, p.limitedScope, true)
+		return utils.ComputeNamespacedPlacement(fedObject, fedNsObject, clusters, p.limitedScope, true)
 	}
-	return util.ComputePlacement(fedObject, clusters, true)
+	return utils.ComputePlacement(fedObject, clusters, true)
 }
 
-func (p *Plugin) Reconcile(qualifiedName util.QualifiedName, result map[string]int64) error {
+func (p *Plugin) Reconcile(qualifiedName utils.QualifiedName, result map[string]int64) error {
 	fedObject, err := p.federatedTypeClient.Resources(qualifiedName.Namespace).Get(context.Background(), qualifiedName.Name, metav1.GetOptions{})
 	if err != nil && apierrors.IsNotFound(err) {
 		// Federated resource has been deleted - no further action required
@@ -180,19 +180,19 @@ func (p *Plugin) Reconcile(qualifiedName util.QualifiedName, result map[string]i
 	for name := range result {
 		newClusterNames = append(newClusterNames, name)
 	}
-	clusterNames, err := util.GetClusterNames(fedObject)
+	clusterNames, err := utils.GetClusterNames(fedObject)
 	if err != nil {
 		return err
 	}
 	if PlacementUpdateNeeded(clusterNames, newClusterNames) {
-		if err := util.SetClusterNames(fedObject, newClusterNames); err != nil {
+		if err := utils.SetClusterNames(fedObject, newClusterNames); err != nil {
 			return err
 		}
 
 		isDirty = true
 	}
 
-	overridesMap, err := util.GetOverrides(fedObject)
+	overridesMap, err := utils.GetOverrides(fedObject)
 	if err != nil {
 		return errors.Wrapf(err, "Error reading cluster overrides for %s %q", p.typeConfig.GetFederatedType().Kind, qualifiedName)
 	}
@@ -221,15 +221,15 @@ func PlacementUpdateNeeded(names, newNames []string) bool {
 	return !reflect.DeepEqual(names, newNames)
 }
 
-func setOverrides(obj *unstructured.Unstructured, overridesMap util.OverridesMap, replicasMap map[string]int64) error {
+func setOverrides(obj *unstructured.Unstructured, overridesMap utils.OverridesMap, replicasMap map[string]int64) error {
 	if overridesMap == nil {
-		overridesMap = make(util.OverridesMap)
+		overridesMap = make(utils.OverridesMap)
 	}
 	updateOverridesMap(overridesMap, replicasMap)
-	return util.SetOverrides(obj, overridesMap)
+	return utils.SetOverrides(obj, overridesMap)
 }
 
-func updateOverridesMap(overridesMap util.OverridesMap, replicasMap map[string]int64) {
+func updateOverridesMap(overridesMap utils.OverridesMap, replicasMap map[string]int64) {
 	// Remove replicas override for clusters that are not scheduled
 	for clusterName, clusterOverrides := range overridesMap {
 		if _, ok := replicasMap[clusterName]; !ok {
@@ -255,15 +255,15 @@ func updateOverridesMap(overridesMap util.OverridesMap, replicasMap map[string]i
 		if !replicasOverrideFound {
 			clusterOverrides, exist := overridesMap[clusterName]
 			if !exist {
-				clusterOverrides = util.ClusterOverrides{}
+				clusterOverrides = utils.ClusterOverrides{}
 			}
-			clusterOverrides = append(clusterOverrides, util.ClusterOverride{Path: replicasPath, Value: replicas})
+			clusterOverrides = append(clusterOverrides, utils.ClusterOverride{Path: replicasPath, Value: replicas})
 			overridesMap[clusterName] = clusterOverrides
 		}
 	}
 }
 
-func OverrideUpdateNeeded(overridesMap util.OverridesMap, result map[string]int64) bool {
+func OverrideUpdateNeeded(overridesMap utils.OverridesMap, result map[string]int64) bool {
 	resultLen := len(result)
 	checkLen := 0
 	for clusterName, clusterOverridesMap := range overridesMap {

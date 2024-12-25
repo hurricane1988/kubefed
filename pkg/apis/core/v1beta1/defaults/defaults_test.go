@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 func TestSetDefaultKubeFedConfig(t *testing.T) {
@@ -157,8 +157,8 @@ func TestSetDefaultKubeFedConfig(t *testing.T) {
 func defaultKubeFedConfig() *v1beta1.KubeFedConfig {
 	kfc := &v1beta1.KubeFedConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: util.DefaultKubeFedSystemNamespace,
-			Name:      util.KubeFedConfigName,
+			Namespace: utils.DefaultKubeFedSystemNamespace,
+			Name:      utils.KubeFedConfigName,
 		},
 		Spec: v1beta1.KubeFedConfigSpec{
 			Scope: apiextv1.ClusterScoped,

@@ -21,7 +21,7 @@ import (
 	restclient "k8s.io/client-go/rest"
 
 	"sigs.k8s.io/kubefed/pkg/controller/schedulingmanager"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl"
 	kfenable "sigs.k8s.io/kubefed/pkg/kubefedctl/enable"
 	"sigs.k8s.io/kubefed/pkg/schedulingtypes"
@@ -68,7 +68,7 @@ var _ = Describe("Scheduler", func() {
 				for targetTypeName := range schedulingTypes {
 					enableTypeConfigResource(targetTypeName, namespace, kubeConfig, tl)
 				}
-				enableTypeConfigResource(util.NamespaceName, namespace, kubeConfig, tl)
+				enableTypeConfigResource(utils.NamespaceName, namespace, kubeConfig, tl)
 
 				// make sure scheduler/plugin initialization are done before our test
 				By("Waiting for scheduler/plugin controllers are initialized in scheduling manager")
@@ -160,7 +160,7 @@ func enableTypeConfigResource(name, namespace string, config *restclient.Config,
 }
 
 func deleteTypeConfigResource(name, namespace string, config *restclient.Config, tl common.TestLogger) {
-	qualifiedName := util.QualifiedName{Namespace: namespace, Name: name}
+	qualifiedName := utils.QualifiedName{Namespace: namespace, Name: name}
 	err := kubefedctl.DisableFederation(nil, config, nil, qualifiedName, true, false, false)
 	if err != nil {
 		tl.Fatalf("Error disabling federation of target type %q: %v", qualifiedName, err)

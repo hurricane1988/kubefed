@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import (
 
 	fedapis "sigs.k8s.io/kubefed/pkg/apis"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 func TestKubefedClusterController(t *testing.T) {
@@ -51,7 +51,7 @@ var clientset *kubernetes.Clientset
 var k8sClient client.Client
 var cc *ClusterController
 var stopControllerCh chan struct{}
-var config *util.ClusterHealthCheckConfig
+var config *utils.ClusterHealthCheckConfig
 
 var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
@@ -82,23 +82,23 @@ var _ = BeforeSuite(func(done Done) {
 		context.Background(),
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: util.DefaultKubeFedSystemNamespace,
+				Name: utils.DefaultKubeFedSystemNamespace,
 			},
 		},
 		metav1.CreateOptions{},
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	config = &util.ClusterHealthCheckConfig{
+	config = &utils.ClusterHealthCheckConfig{
 		Period:           10 * time.Second,
 		FailureThreshold: 3,
 		SuccessThreshold: 1,
 		Timeout:          10 * time.Second,
 	}
 
-	controllerConfig := &util.ControllerConfig{
-		KubeFedNamespaces: util.KubeFedNamespaces{
-			KubeFedNamespace: util.DefaultKubeFedSystemNamespace,
+	controllerConfig := &utils.ControllerConfig{
+		KubeFedNamespaces: utils.KubeFedNamespaces{
+			KubeFedNamespace: utils.DefaultKubeFedSystemNamespace,
 		},
 		KubeConfig:      cfg,
 		MinimizeLatency: true,
@@ -123,15 +123,15 @@ var _ = Describe("TestKubefedClusterController", func() {
 		ctx := context.TODO()
 		kubefedClusterSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: util.DefaultKubeFedSystemNamespace,
+				Namespace: utils.DefaultKubeFedSystemNamespace,
 				Name:      "test-cluster-data",
 			},
 			Data: map[string][]byte{
-				util.TokenKey: []byte("xxxxx"),
+				utils.TokenKey: []byte("xxxxx"),
 			},
 		}
 
-		_, err := clientset.CoreV1().Secrets(util.DefaultKubeFedSystemNamespace).Create(
+		_, err := clientset.CoreV1().Secrets(utils.DefaultKubeFedSystemNamespace).Create(
 			context.Background(), kubefedClusterSecret, metav1.CreateOptions{},
 		)
 		Expect(err).ToNot(HaveOccurred())
@@ -139,7 +139,7 @@ var _ = Describe("TestKubefedClusterController", func() {
 		kc := &fedv1b1.KubeFedCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "cluster1",
-				Namespace: util.DefaultKubeFedSystemNamespace,
+				Namespace: utils.DefaultKubeFedSystemNamespace,
 				Labels: map[string]string{
 					"foo": "bar",
 				},
@@ -166,7 +166,7 @@ var _ = Describe("TestKubefedClusterController", func() {
 		Expect(found).NotTo(BeTrue())
 
 		fedCluster := &fedv1b1.KubeFedCluster{}
-		err = k8sClient.Get(ctx, client.ObjectKey{Namespace: util.DefaultKubeFedSystemNamespace, Name: kc.Name}, fedCluster)
+		err = k8sClient.Get(ctx, client.ObjectKey{Namespace: utils.DefaultKubeFedSystemNamespace, Name: kc.Name}, fedCluster)
 		Expect(err).ToNot(HaveOccurred())
 
 		fedCluster.Spec.APIEndpoint = "https://my.example.com:80/path/to/newendpoint"

@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,11 +37,11 @@ const (
 	resourcePluralName = "kubefedclusters"
 )
 
-type KubeFedClusterAdmissionHook struct{}
+type AdmissionHook struct{}
 
-var _ admission.Handler = &KubeFedClusterAdmissionHook{}
+var _ admission.Handler = &AdmissionHook{}
 
-func (a *KubeFedClusterAdmissionHook) Handle(ctx context.Context, admissionSpec admission.Request) admission.Response {
+func (a *AdmissionHook) Handle(ctx context.Context, admissionSpec admission.Request) admission.Response {
 	klog.V(4).Infof("Validating %q AdmissionRequest = %s", ResourceName, webhook.AdmissionRequestDebugString(admissionSpec))
 
 	// We want to let through:

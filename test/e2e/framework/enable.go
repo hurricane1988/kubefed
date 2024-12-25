@@ -21,8 +21,8 @@ import (
 	"sigs.k8s.io/kubefed/test/common"
 )
 
-func LoadEnableTypeDirectives(tl common.TestLogger) []*kfenable.EnableTypeDirective {
-	enableTypeDirectives := []*kfenable.EnableTypeDirective{}
+func LoadEnableTypeDirectives(tl common.TestLogger) []*kfenable.TypeDirective {
+	enableTypeDirectives := []*kfenable.TypeDirective{}
 	for _, file := range common.AssetNames() {
 		obj := kfenable.NewEnableTypeDirective()
 		filename, err := common.DecodeYamlFromBindata(file, "config/enabletypedirectives/", obj)

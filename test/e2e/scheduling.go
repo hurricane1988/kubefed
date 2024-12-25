@@ -34,7 +34,7 @@ import (
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	fedschedulingv1a1 "sigs.k8s.io/kubefed/pkg/apis/scheduling/v1alpha1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/schedulingtypes"
 	"sigs.k8s.io/kubefed/test/common"
 	"sigs.k8s.io/kubefed/test/e2e/framework"
@@ -221,7 +221,7 @@ func rspSpecWithClusterList(total int32, w1, w2, min1, min2 int64, clusters []st
 
 func createTestObjs(tl common.TestLogger, client genericclient.Client, typeConfig typeconfig.Interface, kubeConfig *restclient.Config, rspSpec fedschedulingv1a1.ReplicaSchedulingPreferenceSpec, namespace string) (string, error) {
 	federatedTypeAPIResource := typeConfig.GetFederatedType()
-	federatedTypeClient, err := util.NewResourceClient(kubeConfig, &federatedTypeAPIResource)
+	federatedTypeClient, err := utils.NewResourceClient(kubeConfig, &federatedTypeAPIResource)
 	if err != nil {
 		return "", err
 	}
@@ -242,7 +242,7 @@ func createTestObjs(tl common.TestLogger, client genericclient.Client, typeConfi
 			"foo": "bar",
 		}
 
-		err = util.SetClusterSelector(fedObject, clusterSelector)
+		err = utils.SetClusterSelector(fedObject, clusterSelector)
 		if err != nil {
 			return "", err
 		}
@@ -271,7 +271,7 @@ func createTestObjs(tl common.TestLogger, client genericclient.Client, typeConfi
 
 func deleteTestObj(typeConfig typeconfig.Interface, kubeConfig *restclient.Config, name, namespace string) error {
 	federatedTypeAPIResource := typeConfig.GetFederatedType()
-	federatedTypeClient, err := util.NewResourceClient(kubeConfig, &federatedTypeAPIResource)
+	federatedTypeClient, err := utils.NewResourceClient(kubeConfig, &federatedTypeAPIResource)
 	if err != nil {
 		return err
 	}
@@ -287,7 +287,7 @@ func deleteTestObj(typeConfig typeconfig.Interface, kubeConfig *restclient.Confi
 func waitForMatchingFederatedObject(tl common.TestLogger, typeConfig typeconfig.Interface, kubeConfig *restclient.Config, name, namespace string, expected32 map[string]int32) error {
 	apiResource := typeConfig.GetFederatedType()
 	kind := apiResource.Kind
-	client, err := util.NewResourceClient(kubeConfig, &apiResource)
+	client, err := utils.NewResourceClient(kubeConfig, &apiResource)
 	if err != nil {
 		return err
 	}
@@ -308,7 +308,7 @@ func waitForMatchingFederatedObject(tl common.TestLogger, typeConfig typeconfig.
 			return false, nil
 		}
 
-		clusterNames, err := util.GetClusterNames(fedObject)
+		clusterNames, err := utils.GetClusterNames(fedObject)
 		if err != nil {
 			tl.Errorf("An error occurred while retrieving cluster names for override %s %s/%s: %v", kind, namespace, name, err)
 			return false, nil
@@ -317,7 +317,7 @@ func waitForMatchingFederatedObject(tl common.TestLogger, typeConfig typeconfig.
 			return false, nil
 		}
 
-		overridesMap, err := util.GetOverrides(fedObject)
+		overridesMap, err := utils.GetOverrides(fedObject)
 		if err != nil {
 			tl.Errorf("Error reading cluster overrides for %s %s/%s: %v", kind, namespace, name, err)
 			return false, nil
@@ -331,7 +331,7 @@ func createIntersectionEnvironment(tl common.TestLogger, client genericclient.Cl
 }
 
 func destroyIntersectionEnvironment(tl common.TestLogger, client genericclient.Client, testNamespace *unstructured.Unstructured, kubefedNamespace string, clusterName string) {
-	testNamespaceKey := util.NewQualifiedName(testNamespace).String()
+	testNamespaceKey := utils.NewQualifiedName(testNamespace).String()
 	err := client.Delete(context.Background(), testNamespace, testNamespace.GetNamespace(), testNamespace.GetName())
 	if err != nil && !apierrors.IsNotFound(err) {
 		tl.Fatalf("Error deleting FederatedNamespace %q: %v", testNamespaceKey, err)

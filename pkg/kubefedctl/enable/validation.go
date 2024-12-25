@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,9 +18,8 @@ package enable
 
 import (
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/utils/pointer"
-
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 func federatedTypeValidationSchema(templateSchema map[string]v1.JSONSchemaProps) *v1.CustomResourceValidation {
@@ -116,7 +115,7 @@ func federatedTypeValidationSchema(templateSchema map[string]v1.JSONSchemaProps)
 												Type: "string",
 											},
 											"value": {
-												XPreserveUnknownFields: pointer.BoolPtr(true),
+												XPreserveUnknownFields: ptr.To(true),
 											},
 										},
 										Required: []string{
@@ -134,7 +133,7 @@ func federatedTypeValidationSchema(templateSchema map[string]v1.JSONSchemaProps)
 	if templateSchema != nil {
 		specProperties := schema.OpenAPIV3Schema.Properties["spec"].Properties
 		specProperties["template"] = v1.JSONSchemaProps{
-			XPreserveUnknownFields: pointer.BoolPtr(true),
+			XPreserveUnknownFields: ptr.To(true),
 			Type:                   "object",
 		}
 		// Add retainReplicas field to types that exposes a replicas
@@ -143,7 +142,7 @@ func federatedTypeValidationSchema(templateSchema map[string]v1.JSONSchemaProps)
 			// TODO: find a simpler way to detect that a resource is scalable than having to compute the entire schema.
 			if replicasField, ok := templateSpec.Properties["replicas"]; ok {
 				if replicasField.Type == "integer" && replicasField.Format == "int32" {
-					specProperties[util.RetainReplicasField] = v1.JSONSchemaProps{
+					specProperties[utils.RetainReplicasField] = v1.JSONSchemaProps{
 						Type: "boolean",
 					}
 				}
@@ -216,7 +215,7 @@ func ValidationSchema(specProps v1.JSONSchemaProps) *v1.CustomResourceValidation
 											Type: "string",
 										},
 										"remoteStatus": {
-											XPreserveUnknownFields: pointer.BoolPtr(true),
+											XPreserveUnknownFields: ptr.To(true),
 											Type:                   "object",
 										},
 									},

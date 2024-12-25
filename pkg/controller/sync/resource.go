@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import (
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	"sigs.k8s.io/kubefed/pkg/controller/sync/dispatch"
 	"sigs.k8s.io/kubefed/pkg/controller/sync/version"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 // FederatedResource encapsulates the behavior of a logical federated
@@ -46,7 +46,7 @@ import (
 type FederatedResource interface {
 	dispatch.FederatedResourceForDispatch
 
-	FederatedName() util.QualifiedName
+	FederatedName() utils.QualifiedName
 	FederatedKind() string
 	UpdateVersions(selectedClusters []string, versionMap map[string]string) error
 	DeleteVersions()
@@ -60,19 +60,19 @@ type federatedResource struct {
 	limitedScope      bool
 	typeConfig        typeconfig.Interface
 	targetIsNamespace bool
-	targetName        util.QualifiedName
+	targetName        utils.QualifiedName
 	federatedKind     string
-	federatedName     util.QualifiedName
+	federatedName     utils.QualifiedName
 	federatedResource *unstructured.Unstructured
-	versionManager    *version.VersionManager
-	overridesMap      util.OverridesMap
+	versionManager    *version.Manager
+	overridesMap      utils.OverridesMap
 	versionMap        map[string]string
 	namespace         *unstructured.Unstructured
 	fedNamespace      *unstructured.Unstructured
 	eventRecorder     record.EventRecorder
 }
 
-func (r *federatedResource) FederatedName() util.QualifiedName {
+func (r *federatedResource) FederatedName() utils.QualifiedName {
 	return r.federatedName
 }
 
@@ -80,7 +80,7 @@ func (r *federatedResource) FederatedKind() string {
 	return r.typeConfig.GetFederatedType().Kind
 }
 
-func (r *federatedResource) TargetName() util.QualifiedName {
+func (r *federatedResource) TargetName() utils.QualifiedName {
 	return r.targetName
 }
 
@@ -131,9 +131,9 @@ func (r *federatedResource) DeleteVersions() {
 
 func (r *federatedResource) ComputePlacement(clusters []*fedv1b1.KubeFedCluster) (sets.Set[string], error) {
 	if r.typeConfig.GetNamespaced() {
-		return util.ComputeNamespacedPlacement(r.federatedResource, r.fedNamespace, clusters, r.limitedScope, false)
+		return utils.ComputeNamespacedPlacement(r.federatedResource, r.fedNamespace, clusters, r.limitedScope, false)
 	}
-	return util.ComputePlacement(r.federatedResource, clusters, false)
+	return utils.ComputePlacement(r.federatedResource, clusters, false)
 }
 
 func (r *federatedResource) NamespaceNotFederated() bool {
@@ -160,12 +160,12 @@ func (r *federatedResource) IsNamespaceInHostCluster(clusterObj runtimeclient.Ob
 	// Deletion of a federated namespace should also not result in
 	// deletion of its containing namespace, since that could result
 	// in the deletion of a namespaced KubeFed control plane.
-	return r.targetIsNamespace && util.IsPrimaryCluster(r.namespace, clusterObj)
+	return r.targetIsNamespace && utils.IsPrimaryCluster(r.namespace, clusterObj)
 }
 
 // TODO(marun) Marshall the template once per reconcile, not per-cluster
 func (r *federatedResource) ObjectForCluster(clusterName string) (*unstructured.Unstructured, error) {
-	templateBody, ok, err := unstructured.NestedMap(r.federatedResource.Object, util.SpecField, util.TemplateField)
+	templateBody, ok, err := unstructured.NestedMap(r.federatedResource.Object, utils.SpecField, utils.TemplateField)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error retrieving template body")
 	}
@@ -194,7 +194,7 @@ func (r *federatedResource) ObjectForCluster(clusterName string) (*unstructured.
 	// TODO(marun) this should be documented
 	obj.SetName(r.federatedResource.GetName())
 	if !r.targetIsNamespace {
-		namespace := util.NamespaceForCluster(clusterName, r.federatedResource.GetNamespace())
+		namespace := utils.NamespaceForCluster(clusterName, r.federatedResource.GetNamespace())
 		obj.SetNamespace(namespace)
 	}
 	targetAPIResource := r.typeConfig.GetTargetType()
@@ -218,7 +218,7 @@ func (r *federatedResource) ApplyOverrides(obj *unstructured.Unstructured, clust
 		return err
 	}
 	if overrides != nil {
-		if err := util.ApplyJSONPatch(obj, overrides); err != nil {
+		if err := utils.ApplyJSONPatch(obj, overrides); err != nil {
 			return err
 		}
 	}
@@ -226,7 +226,7 @@ func (r *federatedResource) ApplyOverrides(obj *unstructured.Unstructured, clust
 	// Ensure that resources managed by KubeFed always have the
 	// managed label.  The label is intended to be targeted by all the
 	// KubeFed controllers.
-	util.AddManagedLabel(obj)
+	utils.AddManagedLabel(obj)
 
 	return nil
 }
@@ -240,11 +240,11 @@ func (r *federatedResource) RecordEvent(reason, messageFmt string, args ...inter
 	r.eventRecorder.Eventf(r.Object(), corev1.EventTypeNormal, reason, messageFmt, args...)
 }
 
-func (r *federatedResource) overridesForCluster(clusterName string) (util.ClusterOverrides, error) {
+func (r *federatedResource) overridesForCluster(clusterName string) (utils.ClusterOverrides, error) {
 	r.Lock()
 	defer r.Unlock()
 	if r.overridesMap == nil {
-		overridesMap, err := util.GetOverrides(r.federatedResource)
+		overridesMap, err := utils.GetOverrides(r.federatedResource)
 		if err != nil {
 			return nil, errors.Wrapf(err, "Error reading cluster overrides")
 		}
@@ -254,7 +254,7 @@ func (r *federatedResource) overridesForCluster(clusterName string) (util.Cluste
 }
 
 func GetTemplateHash(fieldMap map[string]interface{}) (string, error) {
-	fields := []string{util.SpecField, util.TemplateField}
+	fields := []string{utils.SpecField, utils.TemplateField}
 	fieldMap, ok, err := unstructured.NestedMap(fieldMap, fields...)
 	if err != nil {
 		return "", errors.Wrapf(err, "Error retrieving %q", strings.Join(fields, "."))
@@ -268,8 +268,8 @@ func GetTemplateHash(fieldMap map[string]interface{}) (string, error) {
 }
 
 func GetOverrideHash(rawObj *unstructured.Unstructured) (string, error) {
-	override := util.GenericOverride{}
-	err := util.UnstructuredToInterface(rawObj, &override)
+	override := utils.GenericOverride{}
+	err := utils.UnstructuredToInterface(rawObj, &override)
 	if err != nil {
 		return "", errors.Wrap(err, "Error retrieving overrides")
 	}

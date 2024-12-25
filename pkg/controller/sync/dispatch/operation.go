@@ -26,14 +26,14 @@ import (
 
 	"sigs.k8s.io/kubefed/pkg/client/generic"
 	"sigs.k8s.io/kubefed/pkg/controller/sync/status"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 type clientAccessorFunc func(clusterName string) (generic.Client, error)
 
 type dispatchRecorder interface {
 	recordEvent(clusterName, operation, operationContinuous string)
-	recordOperationError(status status.PropagationStatus, clusterName, operation string, err error) util.ReconciliationStatus
+	recordOperationError(status status.PropagationStatus, clusterName, operation string, err error) utils.ReconciliationStatus
 }
 
 // OperationDispatcher provides an interface to wait for operations
@@ -48,7 +48,7 @@ type OperationDispatcher interface {
 type operationDispatcherImpl struct {
 	clientAccessor clientAccessorFunc
 
-	resultChan          chan util.ReconciliationStatus
+	resultChan          chan utils.ReconciliationStatus
 	operationsInitiated int32
 
 	timeout time.Duration
@@ -59,7 +59,7 @@ type operationDispatcherImpl struct {
 func newOperationDispatcher(clientAccessor clientAccessorFunc, recorder dispatchRecorder) *operationDispatcherImpl {
 	return &operationDispatcherImpl{
 		clientAccessor: clientAccessor,
-		resultChan:     make(chan util.ReconciliationStatus),
+		resultChan:     make(chan utils.ReconciliationStatus),
 		timeout:        30 * time.Second, // TODO(marun) Make this configurable
 		recorder:       recorder,
 	}
@@ -77,7 +77,7 @@ func (d *operationDispatcherImpl) Wait() (bool, error) {
 		}
 		select {
 		case result := <-d.resultChan:
-			if result == util.StatusError {
+			if result == utils.StatusError {
 				ok = false
 			}
 			break
@@ -92,7 +92,7 @@ func (d *operationDispatcherImpl) Wait() (bool, error) {
 	return ok, nil
 }
 
-func (d *operationDispatcherImpl) clusterOperation(clusterName, op string, opFunc func(generic.Client) util.ReconciliationStatus) {
+func (d *operationDispatcherImpl) clusterOperation(clusterName, op string, opFunc func(generic.Client) utils.ReconciliationStatus) {
 	// TODO(marun) Support cancellation of client calls on timeout.
 	client, err := d.clientAccessor(clusterName)
 	if err != nil {
@@ -102,7 +102,7 @@ func (d *operationDispatcherImpl) clusterOperation(clusterName, op string, opFun
 		} else {
 			d.recorder.recordOperationError(status.ClientRetrievalFailed, clusterName, op, wrappedErr)
 		}
-		d.resultChan <- util.StatusError
+		d.resultChan <- utils.StatusError
 		return
 	}
 

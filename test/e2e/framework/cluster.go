@@ -24,7 +24,7 @@ import (
 
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/test/common"
 )
 
@@ -53,7 +53,7 @@ func clusterIsReadyOrFail(tl common.TestLogger, client genericclient.Client,
 	namespace string, interval, timeout time.Duration, cluster *fedv1b1.KubeFedCluster) {
 	clusterName := cluster.Name
 	tl.Logf("Checking readiness for federated cluster %q", clusterName)
-	if util.IsClusterReady(&cluster.Status) {
+	if utils.IsClusterReady(&cluster.Status) {
 		return
 	}
 	err := wait.Poll(interval, timeout, func() (bool, error) {
@@ -62,7 +62,7 @@ func clusterIsReadyOrFail(tl common.TestLogger, client genericclient.Client,
 		if err != nil {
 			return false, err
 		}
-		return util.IsClusterReady(&cluster.Status), nil
+		return utils.IsClusterReady(&cluster.Status), nil
 	})
 	if err != nil {
 		tl.Fatalf("Error determining readiness for cluster %q: %+v", clusterName, err)

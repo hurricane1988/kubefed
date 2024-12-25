@@ -21,7 +21,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# shellcheck source=util.sh
+# shellcheck source=utils.sh
 source "${BASH_SOURCE%/*}/util.sh"
 NUM_CLUSTERS="${NUM_CLUSTERS:-2}"
 KIND_IMAGE="${KIND_IMAGE:-}"
@@ -64,7 +64,7 @@ function fixup-cluster() {
 
 function check-clusters-ready() {
   for i in $(seq "${1}"); do
-    util::wait-for-condition 'ok' "kubectl --context cluster${i} get --raw=/healthz &> /dev/null" 120
+    utils::wait-for-condition 'ok' "kubectl --context cluster${i} get --raw=/healthz &> /dev/null" 120
   done
 }
 

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,9 +35,9 @@ import (
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	fedschedulingv1a1 "sigs.k8s.io/kubefed/pkg/apis/scheduling/v1alpha1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	ctlutil "sigs.k8s.io/kubefed/pkg/controller/util"
-	"sigs.k8s.io/kubefed/pkg/controller/util/planner"
-	"sigs.k8s.io/kubefed/pkg/controller/util/podanalyzer"
+	ctlutil "sigs.k8s.io/kubefed/pkg/controller/utils"
+	"sigs.k8s.io/kubefed/pkg/controller/utils/planner"
+	"sigs.k8s.io/kubefed/pkg/controller/utils/podanalyzer"
 )
 
 const (

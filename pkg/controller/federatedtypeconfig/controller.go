@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,18 +35,18 @@ import (
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
 	statuscontroller "sigs.k8s.io/kubefed/pkg/controller/status"
 	synccontroller "sigs.k8s.io/kubefed/pkg/controller/sync"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/metrics"
 )
 
 const finalizer string = "core.kubefed.io/federated-type-config"
 
-// The FederatedTypeConfig controller configures sync and status
+// Controller The FederatedTypeConfig controller configures sync and status
 // controllers in response to FederatedTypeConfig resources in the
 // KubeFed system namespace.
 type Controller struct {
 	// Arguments to use when starting new controllers
-	controllerConfig *util.ControllerConfig
+	controllerConfig *utils.ControllerConfig
 
 	client genericclient.Client
 
@@ -59,11 +59,15 @@ type Controller struct {
 	// Informer for the FederatedTypeConfig objects
 	controller cache.Controller
 
-	worker util.ReconcileWorker
+	worker utils.ReconcileWorker
+	// ctx is the context that governs the Manager's operations, allowing for graceful shutdowns or cancellations.
+	ctx context.Context
+	// immediate indicates whether the Manager should propagate version information immediately or wait for a synchronization cycle.
+	immediate bool
 }
 
 // StartController starts the Controller for managing FederatedTypeConfig objects.
-func StartController(config *util.ControllerConfig, stopChan <-chan struct{}) error {
+func StartController(config *utils.ControllerConfig, stopChan <-chan struct{}) error {
 	controller, err := newController(config)
 	if err != nil {
 		return err
@@ -74,31 +78,31 @@ func StartController(config *util.ControllerConfig, stopChan <-chan struct{}) er
 }
 
 // newController returns a new controller to manage FederatedTypeConfig objects.
-func newController(config *util.ControllerConfig) (*Controller, error) {
+func newController(config *utils.ControllerConfig) (*Controller, error) {
 	userAgent := "FederatedTypeConfig"
 	kubeConfig := restclient.CopyConfig(config.KubeConfig)
 	restclient.AddUserAgent(kubeConfig, userAgent)
-	genericclient, err := genericclient.New(kubeConfig)
+	genericClient, err := genericclient.New(kubeConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	c := &Controller{
 		controllerConfig: config,
-		client:           genericclient,
+		client:           genericClient,
 		stopChannels:     make(map[string]chan struct{}),
 	}
 
-	c.worker = util.NewReconcileWorker("federatedtypeconfig", c.reconcile, util.WorkerOptions{})
+	c.worker = utils.NewReconcileWorker("federatedtypeconfig", c.reconcile, utils.WorkerOptions{})
 
 	// Only watch the KubeFed namespace to ensure
 	// restrictive authz can be applied to a namespaced
 	// control plane.
-	c.store, c.controller, err = util.NewGenericInformer(
+	c.store, c.controller, err = utils.NewGenericInformer(
 		kubeConfig,
 		config.KubeFedNamespace,
 		&corev1b1.FederatedTypeConfig{},
-		util.NoResyncPeriod,
+		utils.NoResyncPeriod,
 		c.worker.EnqueueObject,
 	)
 	if err != nil {
@@ -127,7 +131,7 @@ func (c *Controller) Run(stopChan <-chan struct{}) {
 	}()
 }
 
-func (c *Controller) reconcile(qualifiedName util.QualifiedName) util.ReconciliationStatus {
+func (c *Controller) reconcile(qualifiedName utils.QualifiedName) utils.ReconciliationStatus {
 	key := qualifiedName.String()
 	defer metrics.UpdateControllerReconcileDurationFromStart("federatedtypeconfigcontroller", time.Now())
 
@@ -135,11 +139,11 @@ func (c *Controller) reconcile(qualifiedName util.QualifiedName) util.Reconcilia
 
 	cachedObj, err := c.objCopyFromCache(key)
 	if err != nil {
-		return util.StatusError
+		return utils.StatusError
 	}
 
 	if cachedObj == nil {
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	}
 	typeConfig := cachedObj.(*corev1b1.FederatedTypeConfig)
 
@@ -147,7 +151,7 @@ func (c *Controller) reconcile(qualifiedName util.QualifiedName) util.Reconcilia
 	corev1b1.SetFederatedTypeConfigDefaults(typeConfig)
 
 	syncEnabled := typeConfig.GetPropagationEnabled()
-	// NOTE (hectorj2f): RawResourceStatusCollection is a new feature and is
+	// NOTE (Hector): RawResourceStatusCollection is a new feature and is
 	// Disabled by default. When RawResourceStatusCollection is enabled,
 	// the old mechanism to collect the service status of FederatedServices would be disabled.
 	statusControllerEnabled := !c.controllerConfig.RawResourceStatusCollection && c.isEnabledFederatedServiceStatusCollection(typeConfig)
@@ -173,9 +177,9 @@ func (c *Controller) reconcile(qualifiedName util.QualifiedName) util.Reconcilia
 		err = c.client.UpdateStatus(context.TODO(), typeConfig)
 		if err != nil {
 			runtime.HandleError(errors.Wrapf(err, "Could not update status fields of the CRD: %q", key))
-			return util.StatusError
+			return utils.StatusError
 		}
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	}
 
 	statusKey := typeConfig.Name + "/status"
@@ -199,15 +203,15 @@ func (c *Controller) reconcile(qualifiedName util.QualifiedName) util.Reconcilia
 		err := c.removeFinalizer(typeConfig)
 		if err != nil {
 			runtime.HandleError(errors.Wrapf(err, "Failed to remove finalizer from FederatedTypeConfig %q", key))
-			return util.StatusError
+			return utils.StatusError
 		}
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	}
 
 	updated, err := c.ensureFinalizer(typeConfig)
 	if err != nil {
 		runtime.HandleError(errors.Wrapf(err, "Failed to ensure finalizer for FederatedTypeConfig %q", key))
-		return util.StatusError
+		return utils.StatusError
 	} else if updated && typeConfig.IsNamespace() {
 		// Detected creation of the namespace FTC. If there are existing FTCs
 		// which did not start their sync controllers due to the lack of a
@@ -219,9 +223,9 @@ func (c *Controller) reconcile(qualifiedName util.QualifiedName) util.Reconcilia
 	startNewSyncController := !syncRunning && syncEnabled
 	stopSyncController := syncRunning && (!syncEnabled || (typeConfig.GetNamespaced() && !c.namespaceFTCExists()))
 	if startNewSyncController {
-		if err := c.startSyncController(typeConfig); err != nil {
+		if err = c.startSyncController(c.ctx, c.immediate, typeConfig); err != nil {
 			runtime.HandleError(err)
-			return util.StatusError
+			return utils.StatusError
 		}
 	} else if stopSyncController {
 		c.stopController(typeConfig.Name, syncStopChan)
@@ -230,9 +234,9 @@ func (c *Controller) reconcile(qualifiedName util.QualifiedName) util.Reconcilia
 	startNewStatusController := !statusRunning && statusControllerEnabled
 	stopStatusController := statusRunning && !statusControllerEnabled
 	if startNewStatusController {
-		if err := c.startStatusController(statusKey, typeConfig); err != nil {
+		if err = c.startStatusController(statusKey, typeConfig); err != nil {
 			runtime.HandleError(err)
-			return util.StatusError
+			return utils.StatusError
 		}
 	} else if stopStatusController {
 		c.stopController(statusKey, statusStopChan)
@@ -240,9 +244,9 @@ func (c *Controller) reconcile(qualifiedName util.QualifiedName) util.Reconcilia
 
 	if !startNewSyncController && !stopSyncController &&
 		typeConfig.Status.ObservedGeneration != typeConfig.Generation {
-		if err := c.refreshSyncController(typeConfig); err != nil {
+		if err = c.refreshSyncController(c.ctx, c.immediate, typeConfig); err != nil {
 			runtime.HandleError(err)
-			return util.StatusError
+			return utils.StatusError
 		}
 	}
 
@@ -267,9 +271,9 @@ func (c *Controller) reconcile(qualifiedName util.QualifiedName) util.Reconcilia
 	err = c.client.UpdateStatus(context.TODO(), typeConfig)
 	if err != nil {
 		runtime.HandleError(errors.Wrapf(err, "Could not update status fields of the CRD: %q", key))
-		return util.StatusError
+		return utils.StatusError
 	}
-	return util.StatusAllOK
+	return utils.StatusAllOK
 }
 
 func (c *Controller) objCopyFromCache(key string) (runtimeclient.Object, error) {
@@ -303,7 +307,7 @@ func (c *Controller) getStopChannel(name string) (chan struct{}, bool) {
 	return stopChan, ok
 }
 
-func (c *Controller) startSyncController(tc *corev1b1.FederatedTypeConfig) error {
+func (c *Controller) startSyncController(ctx context.Context, immediate bool, tc *corev1b1.FederatedTypeConfig) error {
 	// TODO(marun) Consider using a shared informer for federated
 	// namespace that can be shared between all controllers of a
 	// cluster-scoped KubeFed control plane.  A namespace-scoped
@@ -327,7 +331,7 @@ func (c *Controller) startSyncController(tc *corev1b1.FederatedTypeConfig) error
 	}
 
 	stopChan := make(chan struct{})
-	err := synccontroller.StartKubeFedSyncController(c.controllerConfig, stopChan, ftc, fedNamespaceAPIResource)
+	err := synccontroller.StartKubeFedSyncController(ctx, immediate, c.controllerConfig, stopChan, ftc, fedNamespaceAPIResource)
 	if err != nil {
 		close(stopChan)
 		return errors.Wrapf(err, "Error starting sync controller for %q", kind)
@@ -363,7 +367,7 @@ func (c *Controller) stopController(key string, stopChan chan struct{}) {
 	delete(c.stopChannels, key)
 }
 
-func (c *Controller) refreshSyncController(tc *corev1b1.FederatedTypeConfig) error {
+func (c *Controller) refreshSyncController(ctx context.Context, immediate bool, tc *corev1b1.FederatedTypeConfig) error {
 	klog.Infof("refreshing sync controller for %q", tc.Name)
 
 	syncStopChan, ok := c.getStopChannel(tc.Name)
@@ -371,7 +375,7 @@ func (c *Controller) refreshSyncController(tc *corev1b1.FederatedTypeConfig) err
 		c.stopController(tc.Name, syncStopChan)
 	}
 
-	return c.startSyncController(tc)
+	return c.startSyncController(ctx, immediate, tc)
 }
 
 func (c *Controller) ensureFinalizer(tc *corev1b1.FederatedTypeConfig) (bool, error) {
@@ -400,9 +404,9 @@ func (c *Controller) namespaceFTCExists() bool {
 }
 
 func (c *Controller) getFederatedNamespaceAPIResource() (*metav1.APIResource, error) {
-	qualifiedName := util.QualifiedName{
+	qualifiedName := utils.QualifiedName{
 		Namespace: c.controllerConfig.KubeFedNamespace,
-		Name:      util.NamespaceName,
+		Name:      utils.NamespaceName,
 	}
 	key := qualifiedName.String()
 	cachedObj, exists, err := c.store.GetByKey(key)

@@ -1,3 +1,19 @@
+/*
+Copyright 2024 The CodeFuture Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package app
 
 import (
@@ -17,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	ctrwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"sigs.k8s.io/kubefed/pkg/controller/webhook/federatedtypeconfig"
 	"sigs.k8s.io/kubefed/pkg/controller/webhook/kubefedcluster"
@@ -93,10 +108,10 @@ func Run(stopChan <-chan struct{}) error {
 	}
 	hookServer := mgr.GetWebhookServer()
 
-	hookServer.Register("/validate-federatedtypeconfigs", &ctrwebhook.Admission{Handler: &federatedtypeconfig.FederatedTypeConfigAdmissionHook{}})
-	hookServer.Register("/validate-kubefedcluster", &ctrwebhook.Admission{Handler: &kubefedcluster.KubeFedClusterAdmissionHook{}})
-	hookServer.Register("/validate-kubefedconfig", &ctrwebhook.Admission{Handler: &kubefedconfig.KubeFedConfigValidator{}})
-	hookServer.Register("/default-kubefedconfig", &ctrwebhook.Admission{Handler: &kubefedconfig.KubeFedConfigDefaulter{}})
+	hookServer.Register("/validate-federatedtypeconfigs", &webhook.Admission{Handler: &federatedtypeconfig.AdmissionHook{}})
+	hookServer.Register("/validate-kubefedcluster", &webhook.Admission{Handler: &kubefedcluster.AdmissionHook{}})
+	hookServer.Register("/validate-kubefedconfig", &webhook.Admission{Handler: &kubefedconfig.Validator{}})
+	hookServer.Register("/default-kubefedconfig", &webhook.Admission{Handler: &kubefedconfig.KubeFedConfigDefaulter{}})
 
 	hookServer.WebhookMux().Handle("/readyz/", http.StripPrefix("/readyz/", &healthz.Handler{}))
 

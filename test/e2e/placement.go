@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/test/common"
 	"sigs.k8s.io/kubefed/test/e2e/framework"
 
@@ -110,7 +110,7 @@ var _ = Describe("Placement", func() {
 		// Ensure federated namespace with placement selecting no
 		// clusters exist for the test namespace.
 		fedNamespace := f.EnsureTestFederatedNamespace(false)
-		fedNamespaceKey := util.NewQualifiedName(fedNamespace).String()
+		fedNamespaceKey := utils.NewQualifiedName(fedNamespace).String()
 		// Ensure the removal of the namespace placement to avoid affecting other tests.
 		defer func() {
 			err := client.Delete(context.Background(), fedNamespace, fedNamespace.GetNamespace(), fedNamespace.GetName())
@@ -123,9 +123,9 @@ var _ = Describe("Placement", func() {
 		// Check for removal of the propagated resource from all clusters
 		targetAPIResource := selectedTypeConfig.GetTargetType()
 		targetKind := targetAPIResource.Kind
-		qualifiedName := util.NewQualifiedName(fedObject)
+		qualifiedName := utils.NewQualifiedName(fedObject)
 		for clusterName, testCluster := range crudTester.TestClusters() {
-			client, err := util.NewResourceClient(testCluster.Config, &targetAPIResource)
+			client, err := utils.NewResourceClient(testCluster.Config, &targetAPIResource)
 			if err != nil {
 				tl.Fatalf("Error creating resource client for %q: %v", targetKind, err)
 			}

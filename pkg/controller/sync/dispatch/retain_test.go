@@ -17,13 +17,14 @@ limitations under the License.
 package dispatch
 
 import (
+	"k8s.io/utils/ptr"
 	"reflect"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
 
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 func TestRetainClusterFields(t *testing.T) {
@@ -74,7 +75,7 @@ func TestRetainClusterFields(t *testing.T) {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 
-			replicas, ok, err := unstructured.NestedInt64(desiredObj.Object, util.SpecField, util.ReplicasField)
+			replicas, ok, err := unstructured.NestedInt64(desiredObj.Object, utils.SpecField, utils.ReplicasField)
 			if !ok {
 				t.Fatalf("Field 'spec.replicas' not found")
 			}
@@ -150,7 +151,7 @@ func TestRetainHealthCheckNodePortInServiceFields(t *testing.T) {
 				},
 			},
 			true,
-			pointer.Int64Ptr(1000),
+			ptr.To[int64](1000),
 		},
 	}
 	for _, test := range tests {

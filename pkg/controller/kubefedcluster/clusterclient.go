@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,18 +35,18 @@ import (
 	fedcommon "sigs.k8s.io/kubefed/pkg/apis/core/common"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	"sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/metrics"
 )
 
 const (
 	UserAgentName = "Cluster-Controller"
 
-	// Following labels come from k8s.io/kubernetes/pkg/kubelet/apis
+	// LabelZoneFailureDomain Following labels come from k8s.io/kubernetes/pkg/kubelet/apis
 	LabelZoneFailureDomain = "failure-domain.beta.kubernetes.io/zone"
 	LabelZoneRegion        = "failure-domain.beta.kubernetes.io/region"
 
-	// Common ClusterConditions for KubeFedClusterStatus
+	// ClusterReady Common ClusterConditions for KubeFedClusterStatus
 	ClusterReady                 = "ClusterReady"
 	HealthzOk                    = "/healthz responded with ok"
 	ClusterNotReady              = "ClusterNotReady"
@@ -71,7 +71,7 @@ type ClusterClient struct {
 // with information from a kubeconfig stored in a kubernetes secret.
 func NewClusterClientSet(c *fedv1b1.KubeFedCluster, client generic.Client, fedNamespace string, timeout time.Duration) (*ClusterClient, error) {
 	var clusterClientSet = ClusterClient{clusterName: c.Name}
-	clusterConfig, err := util.BuildClusterConfig(c, client, fedNamespace)
+	clusterConfig, err := utils.BuildClusterConfig(c, client, fedNamespace)
 	if err != nil {
 		return &clusterClientSet, err
 	}

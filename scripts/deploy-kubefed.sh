@@ -35,7 +35,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# shellcheck source=util.sh
+# shellcheck source=utils.sh
 source "${BASH_SOURCE%/*}/util.sh"
 
 function deploy-with-helm() {

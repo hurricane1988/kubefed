@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	ctlutil "sigs.k8s.io/kubefed/pkg/controller/util"
+	ctlutil "sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/enable"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/options"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/util"
@@ -78,7 +78,7 @@ type disableType struct {
 
 type disableTypeOptions struct {
 	deleteCRD           bool
-	enableTypeDirective *enable.EnableTypeDirective
+	enableTypeDirective *enable.TypeDirective
 }
 
 // Bind adds the disable specific arguments to the flagset passed in as an
@@ -172,7 +172,7 @@ func (j *disableType) Run(cmdOut io.Writer, config util.FedConfig) error {
 	return DisableFederation(cmdOut, hostConfig, j.disableTypeOptions.enableTypeDirective, typeConfigName, j.deleteCRD, j.DryRun, true)
 }
 
-func DisableFederation(cmdOut io.Writer, config *rest.Config, enableTypeDirective *enable.EnableTypeDirective,
+func DisableFederation(cmdOut io.Writer, config *rest.Config, enableTypeDirective *enable.TypeDirective,
 	typeConfigName ctlutil.QualifiedName, deleteCRD, dryRun, verifyStopped bool) error {
 	client, err := genericclient.New(config)
 	if err != nil {
@@ -310,7 +310,7 @@ func deleteFederatedTypeConfig(client genericclient.Client, typeConfig *fedv1b1.
 	return nil
 }
 
-func generatedFederatedTypeConfig(config *rest.Config, enableTypeDirective *enable.EnableTypeDirective) (*fedv1b1.FederatedTypeConfig, error) {
+func generatedFederatedTypeConfig(config *rest.Config, enableTypeDirective *enable.TypeDirective) (*fedv1b1.FederatedTypeConfig, error) {
 	apiResource, err := enable.LookupAPIResource(config, enableTypeDirective.Name, enableTypeDirective.Spec.TargetVersion)
 	if err != nil {
 		return nil, err

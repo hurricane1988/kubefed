@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"io"
 	"os/exec"
 	"time"
@@ -29,7 +30,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/controller/schedulingmanager"
 	"sigs.k8s.io/kubefed/pkg/controller/status"
 	"sigs.k8s.io/kubefed/pkg/controller/sync"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/test/common"
 )
 
@@ -39,11 +40,11 @@ type ControllerFixture struct {
 }
 
 // NewSyncControllerFixture initializes a new sync controller fixture.
-func NewSyncControllerFixture(tl common.TestLogger, controllerConfig *util.ControllerConfig, typeConfig typeconfig.Interface, namespacePlacement *metav1.APIResource) *ControllerFixture {
+func NewSyncControllerFixture(ctx context.Context, immediate bool, tl common.TestLogger, controllerConfig *utils.ControllerConfig, typeConfig typeconfig.Interface, namespacePlacement *metav1.APIResource) *ControllerFixture {
 	f := &ControllerFixture{
 		stopChan: make(chan struct{}),
 	}
-	err := sync.StartKubeFedSyncController(controllerConfig, f.stopChan, typeConfig, namespacePlacement)
+	err := sync.StartKubeFedSyncController(ctx, immediate, controllerConfig, f.stopChan, typeConfig, namespacePlacement)
 	if err != nil {
 		tl.Fatalf("Error starting sync controller: %v", err)
 	}
@@ -54,7 +55,7 @@ func NewSyncControllerFixture(tl common.TestLogger, controllerConfig *util.Contr
 		if statusAPIResource == nil {
 			tl.Fatalf("Skipping status collection, status API resource is not defined %q", federatedAPIResource.Kind)
 		}
-		err := status.StartKubeFedStatusController(controllerConfig, f.stopChan, typeConfig)
+		err = status.StartKubeFedStatusController(controllerConfig, f.stopChan, typeConfig)
 		if err != nil {
 			tl.Fatalf("Error starting status controller: %v", err)
 		}
@@ -64,7 +65,7 @@ func NewSyncControllerFixture(tl common.TestLogger, controllerConfig *util.Contr
 
 // NewFederatedTypeConfigControllerFixure initializes a new federatedtypeconfig
 // controller fixure.
-func NewFederatedTypeConfigControllerFixture(tl common.TestLogger, config *util.ControllerConfig) *ControllerFixture {
+func NewFederatedTypeConfigControllerFixture(tl common.TestLogger, config *utils.ControllerConfig) *ControllerFixture {
 	f := &ControllerFixture{
 		stopChan: make(chan struct{}),
 	}
@@ -77,11 +78,11 @@ func NewFederatedTypeConfigControllerFixture(tl common.TestLogger, config *util.
 }
 
 // NewClusterControllerFixture initializes a new cluster controller fixture.
-func NewClusterControllerFixture(tl common.TestLogger, config *util.ControllerConfig) *ControllerFixture {
+func NewClusterControllerFixture(tl common.TestLogger, config *utils.ControllerConfig) *ControllerFixture {
 	f := &ControllerFixture{
 		stopChan: make(chan struct{}),
 	}
-	clusterHealthCheckConfig := &util.ClusterHealthCheckConfig{Period: 1 * time.Second, FailureThreshold: 1}
+	clusterHealthCheckConfig := &utils.ClusterHealthCheckConfig{Period: 1 * time.Second, FailureThreshold: 1}
 	err := kubefedcluster.StartClusterController(config, clusterHealthCheckConfig, f.stopChan)
 	if err != nil {
 		tl.Fatalf("Error starting cluster controller: %v", err)
@@ -89,7 +90,7 @@ func NewClusterControllerFixture(tl common.TestLogger, config *util.ControllerCo
 	return f
 }
 
-func NewSchedulingManagerFixture(tl common.TestLogger, config *util.ControllerConfig) (*ControllerFixture, *schedulingmanager.SchedulingManager) {
+func NewSchedulingManagerFixture(tl common.TestLogger, config *utils.ControllerConfig) (*ControllerFixture, *schedulingmanager.SchedulingManager) {
 	f := &ControllerFixture{
 		stopChan: make(chan struct{}),
 	}

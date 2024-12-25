@@ -125,11 +125,11 @@
 │   │   ├── core
 │   │   │   ├── common
 │   │   │   │   ├── constants.go
-│   │   │   │   └── util.go
+│   │   │   │   └── utils.go
 │   │   │   ├── group.go
 │   │   │   ├── typeconfig
 │   │   │   │   ├── interface.go
-│   │   │   │   └── util.go
+│   │   │   │   └── utils.go
 │   │   │   ├── v1alpha1
 │   │   │   │   ├── clusterpropagatedversion_types.go
 │   │   │   │   ├── federatedservicestatus_types.go
@@ -195,7 +195,7 @@
 │   │   ├── testdata
 │   │   │   └── fixtures
 │   │   │       └── crds.yaml
-│   │   ├── util
+│   │   ├── utils
 │   │   │   ├── backoff.go
 │   │   │   ├── cluster_util.go
 │   │   │   ├── constants.go
@@ -240,7 +240,7 @@
 │   │       │   └── webhook.go
 │   │       ├── kubefedconfig
 │   │       │   └── webhook.go
-│   │       └── util.go
+│   │       └── utils.go
 │   ├── doc.go
 │   ├── features
 │   │   └── features.go
@@ -252,12 +252,12 @@
 │   │   │   ├── directive.go
 │   │   │   ├── enable.go
 │   │   │   ├── schema.go
-│   │   │   ├── util.go
+│   │   │   ├── utils.go
 │   │   │   └── validation.go
 │   │   ├── federate
 │   │   │   ├── federate.go
 │   │   │   ├── federate_test.go
-│   │   │   └── util.go
+│   │   │   └── utils.go
 │   │   ├── join.go
 │   │   ├── join_test.go
 │   │   ├── kubefedctl.go
@@ -270,8 +270,8 @@
 │   │   │   └── status.go
 │   │   ├── suite_test.go
 │   │   ├── unjoin.go
-│   │   ├── util
-│   │   │   ├── util.go
+│   │   ├── utils
+│   │   │   ├── utils.go
 │   │   │   └── yaml_writer.go
 │   │   └── version.go
 │   ├── metrics
@@ -304,7 +304,7 @@
 │   ├── pre-commit.sh
 │   ├── sync-up-helm-chart.sh
 │   ├── update-bindata.sh
-│   └── util.sh
+│   └── utils.sh
 ├── staticcheck.conf
 ├── test
 │   ├── common
@@ -325,7 +325,7 @@
 │   │   ├── resource_helper.go
 │   │   ├── testobjects.go
 │   │   ├── typeconfig.go
-│   │   ├── util.go
+│   │   ├── utils.go
 │   │   └── validation.go
 │   └── e2e
 │       ├── crd.go
@@ -346,7 +346,7 @@
 │       │   ├── logger.go
 │       │   ├── test_context.go
 │       │   ├── unmanaged.go
-│       │   ├── util.go
+│       │   ├── utils.go
 │       │   └── wait.go
 │       ├── ftccontroller.go
 │       ├── kubefedcluster.go

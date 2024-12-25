@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import (
 
 	corev1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	"sigs.k8s.io/kubefed/pkg/controller/schedulingpreference"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/metrics"
 	"sigs.k8s.io/kubefed/pkg/schedulingtypes"
 )
@@ -40,11 +40,11 @@ type SchedulingManager struct {
 	// Informer for the FederatedTypeConfig objects
 	controller cache.Controller
 
-	worker util.ReconcileWorker
+	worker utils.ReconcileWorker
 
-	schedulers *util.SafeMap
+	schedulers *utils.SafeMap
 
-	config *util.ControllerConfig
+	config *utils.ControllerConfig
 }
 
 type SchedulerWrapper struct {
@@ -54,7 +54,7 @@ type SchedulerWrapper struct {
 	// This is needed because typeconfig could be of any name and we run plugins
 	// by federated kinds (eg FederatedDeployment). This also avoids running multiple
 	// plugins in case multiple typeconfigs are created for same federated kind.
-	pluginMap *util.SafeMap
+	pluginMap *utils.SafeMap
 	// Actual scheduler.
 	schedulingtypes.Scheduler
 }
@@ -64,7 +64,7 @@ func (s *SchedulerWrapper) HasPlugin(typeConfigName string) bool {
 	return ok
 }
 
-func StartSchedulingManager(config *util.ControllerConfig, stopChan <-chan struct{}) (*SchedulingManager, error) {
+func StartSchedulingManager(config *utils.ControllerConfig, stopChan <-chan struct{}) (*SchedulingManager, error) {
 	manager, err := newSchedulingManager(config)
 	if err != nil {
 		return nil, err
@@ -78,29 +78,29 @@ func StartSchedulingManager(config *util.ControllerConfig, stopChan <-chan struc
 func newSchedulerWrapper(schedulerInterface schedulingtypes.Scheduler, stopChan chan struct{}) *SchedulerWrapper {
 	return &SchedulerWrapper{
 		stopChan:  stopChan,
-		pluginMap: util.NewSafeMap(),
+		pluginMap: utils.NewSafeMap(),
 		Scheduler: schedulerInterface,
 	}
 }
 
-func newSchedulingManager(config *util.ControllerConfig) (*SchedulingManager, error) {
+func newSchedulingManager(config *utils.ControllerConfig) (*SchedulingManager, error) {
 	userAgent := "SchedulingManager"
 	kubeConfig := restclient.CopyConfig(config.KubeConfig)
 	restclient.AddUserAgent(kubeConfig, userAgent)
 
 	c := &SchedulingManager{
 		config:     config,
-		schedulers: util.NewSafeMap(),
+		schedulers: utils.NewSafeMap(),
 	}
 
-	c.worker = util.NewReconcileWorker("schedulingmanager", c.reconcile, util.WorkerOptions{})
+	c.worker = utils.NewReconcileWorker("schedulingmanager", c.reconcile, utils.WorkerOptions{})
 
 	var err error
-	c.store, c.controller, err = util.NewGenericInformer(
+	c.store, c.controller, err = utils.NewGenericInformer(
 		kubeConfig,
 		config.KubeFedNamespace,
 		&corev1b1.FederatedTypeConfig{},
-		util.NoResyncPeriod,
+		utils.NoResyncPeriod,
 		c.worker.EnqueueObject,
 	)
 	if err != nil {
@@ -143,7 +143,7 @@ func (c *SchedulingManager) shutdown() {
 	}
 }
 
-func (c *SchedulingManager) reconcile(qualifiedName util.QualifiedName) util.ReconciliationStatus {
+func (c *SchedulingManager) reconcile(qualifiedName utils.QualifiedName) utils.ReconciliationStatus {
 	defer metrics.UpdateControllerReconcileDurationFromStart("schedulingmanagercontroller", time.Now())
 
 	key := qualifiedName.String()
@@ -154,25 +154,25 @@ func (c *SchedulingManager) reconcile(qualifiedName util.QualifiedName) util.Rec
 	schedulingType := schedulingtypes.GetSchedulingType(typeConfigName)
 	if schedulingType == nil {
 		// No scheduler supported for this resource
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	}
 	schedulingKind := schedulingType.Kind
 
 	cachedObj, exist, err := c.store.GetByKey(key)
 	if err != nil {
 		runtime.HandleError(errors.Wrapf(err, "Failed to query FederatedTypeConfig store for %q in scheduling manager", key))
-		return util.StatusError
+		return utils.StatusError
 	}
 
 	if !exist {
 		c.stopScheduler(schedulingKind, typeConfigName)
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	}
 
 	typeConfig := cachedObj.(*corev1b1.FederatedTypeConfig)
 	if !typeConfig.GetPropagationEnabled() || typeConfig.DeletionTimestamp != nil {
 		c.stopScheduler(schedulingKind, typeConfigName)
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	}
 
 	// set name and group for the type config target
@@ -186,7 +186,7 @@ func (c *SchedulingManager) reconcile(qualifiedName util.QualifiedName) util.Rec
 		schedulerInterface, err := schedulingpreference.StartSchedulingPreferenceController(c.config, *schedulingType, stopChan)
 		if err != nil {
 			runtime.HandleError(errors.Wrapf(err, "Error starting schedulingpreference controller for %s", schedulingKind))
-			return util.StatusError
+			return utils.StatusError
 		}
 		abstractScheduler = newSchedulerWrapper(schedulerInterface, stopChan)
 		c.schedulers.Store(schedulingKind, abstractScheduler)
@@ -195,7 +195,7 @@ func (c *SchedulingManager) reconcile(qualifiedName util.QualifiedName) util.Rec
 	scheduler := abstractScheduler.(*SchedulerWrapper)
 	if scheduler.HasPlugin(typeConfigName) {
 		// Scheduler and plugin already running for this target typeConfig
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	}
 
 	federatedKind := typeConfig.GetFederatedType().Kind
@@ -203,18 +203,18 @@ func (c *SchedulingManager) reconcile(qualifiedName util.QualifiedName) util.Rec
 	fedNsAPIResource, err := c.getFederatedNamespaceAPIResource()
 	if err != nil {
 		runtime.HandleError(errors.Wrapf(err, "Unable to start plugin %s for %s due to missing FederatedTypeConfig for namespaces", federatedKind, schedulingKind))
-		return util.StatusError
+		return utils.StatusError
 	}
 
 	klog.Infof("Starting plugin %s for %s", federatedKind, schedulingKind)
 	err = scheduler.StartPlugin(typeConfig, fedNsAPIResource)
 	if err != nil {
 		runtime.HandleError(errors.Wrapf(err, "Error starting plugin %s for %s", federatedKind, schedulingKind))
-		return util.StatusError
+		return utils.StatusError
 	}
 	scheduler.pluginMap.Store(typeConfigName, federatedKind)
 
-	return util.StatusAllOK
+	return utils.StatusAllOK
 }
 
 func (c *SchedulingManager) stopScheduler(schedulingKind, typeConfigName string) {
@@ -241,9 +241,9 @@ func (c *SchedulingManager) stopScheduler(schedulingKind, typeConfigName string)
 }
 
 func (c *SchedulingManager) getFederatedNamespaceAPIResource() (*metav1.APIResource, error) {
-	qualifiedName := util.QualifiedName{
+	qualifiedName := utils.QualifiedName{
 		Namespace: c.config.KubeFedNamespace,
-		Name:      util.NamespaceName,
+		Name:      utils.NamespaceName,
 	}
 
 	key := qualifiedName.String()

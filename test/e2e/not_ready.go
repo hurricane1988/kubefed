@@ -30,7 +30,7 @@ import (
 
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl"
 	"sigs.k8s.io/kubefed/test/common"
 	"sigs.k8s.io/kubefed/test/e2e/framework"
@@ -122,30 +122,30 @@ var _ = Describe("[NOT_READY] Simulated not-ready nodes", func() {
 
 		// Override naming methods to allow the sync controller to
 		// work with a simulated federation environment.
-		oldNamespaceForCluster := util.NamespaceForCluster
-		util.NamespaceForCluster = func(clusterName, namespace string) string {
+		oldNamespaceForCluster := utils.NamespaceForCluster
+		utils.NamespaceForCluster = func(clusterName, namespace string) string {
 			return clusterName
 		}
 		defer func() {
-			util.NamespaceForCluster = oldNamespaceForCluster
+			utils.NamespaceForCluster = oldNamespaceForCluster
 		}()
 
-		oldNamespaceForResource := util.NamespaceForResource
-		util.NamespaceForResource = func(resourceNamespace, fedNamespace string) string {
+		oldNamespaceForResource := utils.NamespaceForResource
+		utils.NamespaceForResource = func(resourceNamespace, fedNamespace string) string {
 			return fedNamespace
 		}
 		defer func() {
-			util.NamespaceForResource = oldNamespaceForResource
+			utils.NamespaceForResource = oldNamespaceForResource
 		}()
-		oldQualifiedNameForCluster := util.QualifiedNameForCluster
-		util.QualifiedNameForCluster = func(clusterName string, qualifiedName util.QualifiedName) util.QualifiedName {
-			return util.QualifiedName{
+		oldQualifiedNameForCluster := utils.QualifiedNameForCluster
+		utils.QualifiedNameForCluster = func(clusterName string, qualifiedName utils.QualifiedName) utils.QualifiedName {
+			return utils.QualifiedName{
 				Name:      qualifiedName.Name,
 				Namespace: clusterName,
 			}
 		}
 		defer func() {
-			util.QualifiedNameForCluster = oldQualifiedNameForCluster
+			utils.QualifiedNameForCluster = oldQualifiedNameForCluster
 		}()
 
 		// Ensure that the cluster controller is able to successfully
@@ -170,7 +170,7 @@ var _ = Describe("[NOT_READY] Simulated not-ready nodes", func() {
 			if err != nil {
 				tl.Fatalf("Failed to retrieve unhealthy cluster: %v", err)
 			}
-			return !util.IsClusterReady(&cluster.Status), nil
+			return !utils.IsClusterReady(&cluster.Status), nil
 		})
 		if err != nil {
 			tl.Fatalf("Error waiting for unhealthy cluster: %v", err)
@@ -194,7 +194,7 @@ var _ = Describe("[NOT_READY] Simulated not-ready nodes", func() {
 		}
 		crudTester, targetObject, overrides := initCrudTestWithPropagation(f, tl, hostNamespace, typeConfig, testObjectsFunc, false)
 		fedObject := crudTester.CheckCreate(ctx, immediate, targetObject, overrides, map[string]string{"healthy": "true"})
-		crudTester.CheckStatusCreated(ctx, immediate, util.NewQualifiedName(fedObject))
+		crudTester.CheckStatusCreated(ctx, immediate, utils.NewQualifiedName(fedObject))
 		crudTester.CheckUpdate(ctx, immediate, fedObject)
 		crudTester.CheckDelete(ctx, immediate, fedObject, false)
 	})

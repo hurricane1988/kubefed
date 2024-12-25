@@ -27,7 +27,7 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 // TestLogger defines operations common across different types of testing
@@ -41,7 +41,7 @@ type TestLogger interface {
 
 func Equivalent(actual, desired runtimeclient.Object) bool {
 	// Check for meta & spec equivalence
-	if !util.ObjectMetaAndSpecEquivalent(actual, desired) {
+	if !utils.ObjectMetaAndSpecEquivalent(actual, desired) {
 		return false
 	}
 

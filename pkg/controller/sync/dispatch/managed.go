@@ -19,6 +19,8 @@ package dispatch
 import (
 	"context"
 	"fmt"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"strings"
 	"sync"
 	"time"
@@ -34,14 +36,14 @@ import (
 
 	"sigs.k8s.io/kubefed/pkg/client/generic"
 	"sigs.k8s.io/kubefed/pkg/controller/sync/status"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/metrics"
 )
 
 // FederatedResourceForDispatch is the subset of the FederatedResource
 // interface required for dispatching operations to managed resources.
 type FederatedResourceForDispatch interface {
-	TargetName() util.QualifiedName
+	TargetName() utils.QualifiedName
 	TargetKind() string
 	TargetGVK() schema.GroupVersionKind
 	Object() *unstructured.Unstructured
@@ -142,7 +144,7 @@ func (d *managedDispatcherImpl) Create(clusterName string) {
 	start := time.Now()
 	d.dispatcher.incrementOperationsInitiated()
 	const op = "create"
-	go d.dispatcher.clusterOperation(clusterName, op, func(client generic.Client) util.ReconciliationStatus {
+	go d.dispatcher.clusterOperation(clusterName, op, func(client generic.Client) utils.ReconciliationStatus {
 		d.recordEvent(clusterName, op, "Creating")
 
 		obj, err := d.fedResource.ObjectForCluster(clusterName)
@@ -157,16 +159,16 @@ func (d *managedDispatcherImpl) Create(clusterName string) {
 
 		err = client.Create(context.Background(), obj)
 		if err == nil {
-			version := util.ObjectVersion(obj)
+			version := utils.ObjectVersion(obj)
 			d.recordVersion(clusterName, version)
-			d.RecordStatus(clusterName, status.CreationTimedOut, obj.Object[util.StatusField])
+			d.RecordStatus(clusterName, status.CreationTimedOut, obj.Object[utils.StatusField])
 			metrics.DispatchOperationDurationFromStart("create", start)
-			return util.StatusAllOK
+			return utils.StatusAllOK
 		}
 
 		// TODO(marun) Figure out why attempting to create a namespace that
 		// already exists indicates ServerTimeout instead of AlreadyExists.
-		alreadyExists := apierrors.IsAlreadyExists(err) || d.fedResource.TargetKind() == util.NamespaceKind && apierrors.IsServerTimeout(err)
+		alreadyExists := apierrors.IsAlreadyExists(err) || d.fedResource.TargetKind() == utils.NamespaceKind && apierrors.IsServerTimeout(err)
 		if !alreadyExists {
 			return d.recordOperationError(status.CreationFailed, clusterName, op, err)
 		}
@@ -179,28 +181,28 @@ func (d *managedDispatcherImpl) Create(clusterName string) {
 			return d.recordOperationError(status.RetrievalFailed, clusterName, op, wrappedErr)
 		}
 
-		d.RecordStatus(clusterName, status.CreationTimedOut, obj.Object[util.StatusField])
+		d.RecordStatus(clusterName, status.CreationTimedOut, obj.Object[utils.StatusField])
 
 		if d.skipAdoptingResources && !d.fedResource.IsNamespaceInHostCluster(obj) {
 			_ = d.recordOperationError(status.AlreadyExists, clusterName, op, errors.Errorf("Resource pre-exist in cluster"))
-			return util.StatusAllOK
+			return utils.StatusAllOK
 		}
 
 		d.recordError(clusterName, op, errors.Errorf("An update will be attempted instead of a creation due to an existing resource"))
 		d.Update(clusterName, obj)
 		metrics.DispatchOperationDurationFromStart("update", start)
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	})
 }
 
 func (d *managedDispatcherImpl) Update(clusterName string, clusterObj *unstructured.Unstructured) {
-	d.RecordStatus(clusterName, status.UpdateTimedOut, clusterObj.Object[util.StatusField])
+	d.RecordStatus(clusterName, status.UpdateTimedOut, clusterObj.Object[utils.StatusField])
 
 	d.dispatcher.incrementOperationsInitiated()
 	const op = "update"
-	go d.dispatcher.clusterOperation(clusterName, op, func(client generic.Client) util.ReconciliationStatus {
-		if util.IsExplicitlyUnmanaged(clusterObj) {
-			err := errors.Errorf("Unable to manage the object which has label %s: %s", util.ManagedByKubeFedLabelKey, util.UnmanagedByKubeFedLabelValue)
+	go d.dispatcher.clusterOperation(clusterName, op, func(client generic.Client) utils.ReconciliationStatus {
+		if utils.IsExplicitlyUnmanaged(clusterObj) {
+			err := errors.Errorf("Unable to manage the object which has label %s: %s", utils.ManagedByKubeFedLabelKey, utils.UnmanagedByKubeFedLabelValue)
 			return d.recordOperationError(status.ManagedLabelFalse, clusterName, op, err)
 		}
 
@@ -224,10 +226,10 @@ func (d *managedDispatcherImpl) Update(clusterName string, clusterObj *unstructu
 		if err != nil {
 			return d.recordOperationError(status.VersionRetrievalFailed, clusterName, op, err)
 		}
-		if !util.ObjectNeedsUpdate(obj, clusterObj, version) {
+		if !utils.ObjectNeedsUpdate(obj, clusterObj, version) {
 			// Resource is current
-			d.RecordStatus(clusterName, status.UpdateTimedOut, clusterObj.Object[util.StatusField])
-			return util.StatusAllOK
+			d.RecordStatus(clusterName, status.UpdateTimedOut, clusterObj.Object[utils.StatusField])
+			return utils.StatusAllOK
 		}
 
 		// Only record an event if the resource is not current
@@ -237,11 +239,11 @@ func (d *managedDispatcherImpl) Update(clusterName string, clusterObj *unstructu
 		if err != nil {
 			return d.recordOperationError(status.UpdateFailed, clusterName, op, err)
 		}
-		d.RecordStatus(clusterName, status.UpdateTimedOut, obj.Object[util.StatusField])
+		d.RecordStatus(clusterName, status.UpdateTimedOut, obj.Object[utils.StatusField])
 		d.setResourcesUpdated()
-		version = util.ObjectVersion(obj)
+		version = utils.ObjectVersion(obj)
 		d.recordVersion(clusterName, version)
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	})
 }
 
@@ -252,7 +254,7 @@ func (d *managedDispatcherImpl) Delete(clusterName string, opts ...runtimeclient
 }
 
 func (d *managedDispatcherImpl) RemoveManagedLabel(clusterName string, clusterObj *unstructured.Unstructured) {
-	d.RecordStatus(clusterName, status.LabelRemovalTimedOut, clusterObj.Object[util.StatusField])
+	d.RecordStatus(clusterName, status.LabelRemovalTimedOut, clusterObj.Object[utils.StatusField])
 
 	d.unmanagedDispatcher.RemoveManagedLabel(clusterName, clusterObj)
 }
@@ -273,23 +275,29 @@ func (d *managedDispatcherImpl) RecordStatus(clusterName string, propStatus stat
 	}
 }
 
-func (d *managedDispatcherImpl) recordOperationError(propStatus status.PropagationStatus, clusterName, operation string, err error) util.ReconciliationStatus {
+func (d *managedDispatcherImpl) recordOperationError(propStatus status.PropagationStatus, clusterName, operation string, err error) utils.ReconciliationStatus {
 	d.recordError(clusterName, operation, err)
 	d.RecordStatus(clusterName, propStatus, nil)
-	return util.StatusError
+	return utils.StatusError
 }
 
 func (d *managedDispatcherImpl) recordError(clusterName, operation string, err error) {
 	targetName := d.unmanagedDispatcher.targetNameForCluster(clusterName)
 	args := []interface{}{operation, d.fedResource.TargetKind(), targetName, clusterName}
-	eventType := fmt.Sprintf("%sInClusterFailed", strings.ReplaceAll(strings.Title(operation), " ", ""))
+
+	caser := cases.Title(language.English)
+	eventType := fmt.Sprintf("%sInClusterFailed", strings.ReplaceAll(caser.String(operation), " ", ""))
 	d.fedResource.RecordError(eventType, errors.Wrapf(err, "Failed to "+eventTemplate, args...))
 }
 
 func (d *managedDispatcherImpl) recordEvent(clusterName, operation, operationContinuous string) {
+	// Get the target namespace and name object.
 	targetName := d.unmanagedDispatcher.targetNameForCluster(clusterName)
+	// Build the event parameter.
 	args := []interface{}{operationContinuous, d.fedResource.TargetKind(), targetName, clusterName}
-	eventType := fmt.Sprintf("%sInCluster", strings.ReplaceAll(strings.Title(operation), " ", ""))
+
+	caser := cases.Title(language.English)
+	eventType := fmt.Sprintf("%sInCluster", strings.ReplaceAll(caser.String(operation), " ", ""))
 	d.fedResource.RecordEvent(eventType, eventTemplate, args...)
 }
 

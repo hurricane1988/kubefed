@@ -26,7 +26,7 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	ftc "sigs.k8s.io/kubefed/pkg/controller/webhook/federatedtypeconfig"
 	kfcluster "sigs.k8s.io/kubefed/pkg/controller/webhook/kubefedcluster"
 	kfconfig "sigs.k8s.io/kubefed/pkg/controller/webhook/kubefedconfig"
@@ -253,7 +253,7 @@ func (kfc *kfConfigValidationTest) initialize() runtimeclient.Object {
 	}
 
 	kfconfig := common.ValidKubeFedConfig()
-	kfconfig.Name = names.SimpleNameGenerator.GenerateName(util.KubeFedConfigName + "-")
+	kfconfig.Name = names.SimpleNameGenerator.GenerateName(utils.KubeFedConfigName + "-")
 	kfc.object = kfconfig
 	return kfc.object
 }

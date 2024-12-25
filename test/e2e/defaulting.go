@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1/defaults"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/controller/webhook/kubefedconfig"
 	"sigs.k8s.io/kubefed/pkg/features"
 	"sigs.k8s.io/kubefed/test/e2e/framework"
@@ -44,7 +44,7 @@ var _ = Describe("Default", func() {
 	resourceName := kubefedconfig.ResourceName
 	var client genericclient.Client
 	var defaultKubeFedConfig *v1beta1.KubeFedConfig
-	var qualifiedName *util.QualifiedName
+	var qualifiedName *utils.QualifiedName
 
 	kubeFedConfigGetter := func(namespace, name string) (runtimeclient.Object, error) {
 		kubeFedConfig := &v1beta1.KubeFedConfig{}
@@ -59,13 +59,13 @@ var _ = Describe("Default", func() {
 		}
 
 		if qualifiedName == nil {
-			kubeFedConfigName := util.KubeFedConfigName
+			kubeFedConfigName := utils.KubeFedConfigName
 			if framework.TestContext.LimitedScope {
 				// Default KubeFedConfig name will already exist when running with
 				// LimitedScope so generate a unique name.
-				kubeFedConfigName = names.SimpleNameGenerator.GenerateName(util.KubeFedConfigName + "-")
+				kubeFedConfigName = names.SimpleNameGenerator.GenerateName(utils.KubeFedConfigName + "-")
 			}
-			qualifiedName = &util.QualifiedName{
+			qualifiedName = &utils.QualifiedName{
 				Name: kubeFedConfigName,
 			}
 		}
@@ -120,7 +120,7 @@ var _ = Describe("Default", func() {
 		defaults.SetDefaultKubeFedConfig(myDefaultedKubeFedConfig)
 
 		By(fmt.Sprintf("Verifying the %s defaulted by the mutating admission webhook matches the one defaulted explicitly in this test", resourceName))
-		framework.WaitForObject(tl, qualifiedName.Namespace, qualifiedName.Name, kubeFedConfigGetter, myDefaultedKubeFedConfig, util.ObjectMetaAndSpecEquivalent)
+		framework.WaitForObject(tl, qualifiedName.Namespace, qualifiedName.Name, kubeFedConfigGetter, myDefaultedKubeFedConfig, utils.ObjectMetaAndSpecEquivalent)
 
 		if framework.TestContext.LimitedScope {
 			// Delete the KubeFedConfig we created since the kubefed system

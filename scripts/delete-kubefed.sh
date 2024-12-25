@@ -70,4 +70,4 @@ function ns-deleted() {
   kubectl get ns "${1}" &> /dev/null
   [[ "$?" = "1" ]]
 }
-util::wait-for-condition "removal of namespace '${NS}'" "ns-deleted ${NS}" 120
+utils::wait-for-condition "removal of namespace '${NS}'" "ns-deleted ${NS}" 120

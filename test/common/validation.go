@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1/defaults"
 	"sigs.k8s.io/kubefed/pkg/controller/kubefedcluster"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 func ValidKubeFedCluster() *v1beta1.KubeFedCluster {
@@ -111,8 +111,8 @@ func ValidKubeFedCluster() *v1beta1.KubeFedCluster {
 func ValidKubeFedConfig() *v1beta1.KubeFedConfig {
 	kfc := &v1beta1.KubeFedConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: util.DefaultKubeFedSystemNamespace,
-			Name:      util.KubeFedConfigName,
+			Namespace: utils.DefaultKubeFedSystemNamespace,
+			Name:      utils.KubeFedConfigName,
 		},
 		Spec: v1beta1.KubeFedConfigSpec{
 			Scope: apiextv1.ClusterScoped,

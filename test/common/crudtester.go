@@ -46,7 +46,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/controller/sync"
 	"sigs.k8s.io/kubefed/pkg/controller/sync/status"
 	versionmanager "sigs.k8s.io/kubefed/pkg/controller/sync/version"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/federate"
 )
 
@@ -76,14 +76,14 @@ type TestClusterConfig struct {
 
 type TestCluster struct {
 	TestClusterConfig
-	Client util.ResourceClient
+	Client utils.ResourceClient
 }
 
 func NewFederatedTypeCrudTester(testLogger TestLogger, typeConfig typeconfig.Interface, kubeConfig *rest.Config, testClusters map[string]TestCluster, clustersNamespace string, waitInterval, clusterWaitTimeout time.Duration) (*FederatedTypeCrudTester, error) {
 	return &FederatedTypeCrudTester{
 		tl:                 testLogger,
 		typeConfig:         typeConfig,
-		targetIsNamespace:  typeConfig.GetTargetType().Kind == util.NamespaceKind,
+		targetIsNamespace:  typeConfig.GetTargetType().Kind == utils.NamespaceKind,
 		client:             genericclient.NewForConfigOrDie(kubeConfig),
 		kubeConfig:         kubeConfig,
 		testClusters:       testClusters,
@@ -96,7 +96,7 @@ func NewFederatedTypeCrudTester(testLogger TestLogger, typeConfig typeconfig.Int
 func (c *FederatedTypeCrudTester) CheckLifecycle(ctx context.Context, immediate bool, targetObject *unstructured.Unstructured, overrides []interface{}, selectors map[string]string) {
 	fedObject := c.CheckCreate(ctx, immediate, targetObject, overrides, selectors)
 
-	c.CheckStatusCreated(ctx, immediate, util.NewQualifiedName(fedObject))
+	c.CheckStatusCreated(ctx, immediate, utils.NewQualifiedName(fedObject))
 
 	c.CheckUpdate(ctx, immediate, fedObject)
 	c.CheckPlacementChange(ctx, immediate, fedObject)
@@ -108,7 +108,7 @@ func (c *FederatedTypeCrudTester) CheckLifecycle(ctx context.Context, immediate 
 }
 
 func (c *FederatedTypeCrudTester) Create(targetObject *unstructured.Unstructured, overrides []interface{}, selectors map[string]string) *unstructured.Unstructured {
-	qualifiedName := util.NewQualifiedName(targetObject)
+	qualifiedName := utils.NewQualifiedName(targetObject)
 	kind := c.typeConfig.GetTargetType().Kind
 	fedKind := c.typeConfig.GetFederatedType().Kind
 	fedObject, err := federate.FederatedResourceFromTargetResource(c.typeConfig, targetObject)
@@ -127,18 +127,18 @@ func (c *FederatedTypeCrudTester) createResource(apiResource metav1.APIResource,
 		c.tl.Fatalf("Error creating resource: %v", err)
 	}
 
-	qualifiedName := util.NewQualifiedName(createdObj)
+	qualifiedName := utils.NewQualifiedName(createdObj)
 	c.tl.Logf("Created new %s %q", apiResource.Kind, qualifiedName)
 
 	return createdObj
 }
 
-func (c *FederatedTypeCrudTester) resourceClient(apiResource metav1.APIResource) util.ResourceClient {
-	client, err := util.NewResourceClient(c.kubeConfig, &apiResource)
+func (c *FederatedTypeCrudTester) resourceClient(apiResource metav1.APIResource) utils.ResourceClient {
+	resourceClient, err := utils.NewResourceClient(c.kubeConfig, &apiResource)
 	if err != nil {
 		c.tl.Fatalf("Error creating resource client: %v", err)
 	}
-	return client
+	return resourceClient
 }
 
 func (c *FederatedTypeCrudTester) CheckCreate(ctx context.Context, immediate bool, targetObject *unstructured.Unstructured, overrides []interface{}, selectors map[string]string) *unstructured.Unstructured {
@@ -151,16 +151,16 @@ func (c *FederatedTypeCrudTester) CheckCreate(ctx context.Context, immediate boo
 // AdditionalTestData additionally sets fixture overrides and placement clusternames into federated object
 func (c *FederatedTypeCrudTester) setAdditionalTestData(fedObject *unstructured.Unstructured, overrides []interface{}, selectors map[string]string, generateName string) *unstructured.Unstructured {
 	fedKind := c.typeConfig.GetFederatedType().Kind
-	qualifiedName := util.NewQualifiedName(fedObject)
+	qualifiedName := utils.NewQualifiedName(fedObject)
 
 	if overrides != nil {
-		err := unstructured.SetNestedField(fedObject.Object, overrides, util.SpecField, util.OverridesField)
+		err := unstructured.SetNestedField(fedObject.Object, overrides, utils.SpecField, utils.OverridesField)
 		if err != nil {
 			c.tl.Fatalf("Error updating overrides in %s %q: %v", fedKind, qualifiedName, err)
 		}
 	}
 	if selectors != nil {
-		if err := util.SetClusterSelector(fedObject, selectors); err != nil {
+		if err := utils.SetClusterSelector(fedObject, selectors); err != nil {
 			c.tl.Fatalf("Error setting cluster selectors for %s/%s: %v", fedObject.GetKind(), fedObject.GetName(), err)
 		}
 	} else {
@@ -168,7 +168,7 @@ func (c *FederatedTypeCrudTester) setAdditionalTestData(fedObject *unstructured.
 		for name := range c.testClusters {
 			clusterNames = append(clusterNames, name)
 		}
-		err := util.SetClusterNames(fedObject, clusterNames)
+		err := utils.SetClusterNames(fedObject, clusterNames)
 		if err != nil {
 			c.tl.Fatalf("Error setting cluster names in %s %q: %v", fedKind, qualifiedName, err)
 		}
@@ -181,23 +181,23 @@ func (c *FederatedTypeCrudTester) setAdditionalTestData(fedObject *unstructured.
 func (c *FederatedTypeCrudTester) CheckUpdate(ctx context.Context, immediate bool, fedObject *unstructured.Unstructured) {
 	apiResource := c.typeConfig.GetFederatedType()
 	kind := apiResource.Kind
-	qualifiedName := util.NewQualifiedName(fedObject)
+	qualifiedName := utils.NewQualifiedName(fedObject)
 
 	key := "/metadata/labels"
 	value := map[string]interface{}{
-		"crudtester-operation":        "update",
-		util.ManagedByKubeFedLabelKey: util.ManagedByKubeFedLabelValue,
+		"crudtester-operation":         "update",
+		utils.ManagedByKubeFedLabelKey: utils.ManagedByKubeFedLabelValue,
 	}
 
 	c.tl.Logf("Updating %s %q", kind, qualifiedName)
 	updatedFedObject, err := c.updateObject(ctx, apiResource, fedObject, func(obj *unstructured.Unstructured) {
-		overrides, err := util.GetOverrides(obj)
+		overrides, err := utils.GetOverrides(obj)
 		if err != nil {
 			c.tl.Fatalf("Error retrieving overrides for %s %q: %v", kind, qualifiedName, err)
 		}
 		for clusterName := range c.testClusters {
 			if _, ok := overrides[clusterName]; !ok {
-				overrides[clusterName] = util.ClusterOverrides{}
+				overrides[clusterName] = utils.ClusterOverrides{}
 			}
 			paths := sets.NewString()
 			for _, overrideItem := range overrides[clusterName] {
@@ -207,10 +207,10 @@ func (c *FederatedTypeCrudTester) CheckUpdate(ctx context.Context, immediate boo
 				c.tl.Fatalf("An override for %q already exists for cluster %q", key, clusterName)
 			}
 			paths.Insert(key)
-			overrides[clusterName] = append(overrides[clusterName], util.ClusterOverride{Path: key, Value: value})
+			overrides[clusterName] = append(overrides[clusterName], utils.ClusterOverride{Path: key, Value: value})
 		}
 
-		if err := util.SetOverrides(obj, overrides); err != nil {
+		if err := utils.SetOverrides(obj, overrides); err != nil {
 			c.tl.Fatalf("Unexpected error: %v", err)
 		}
 	})
@@ -227,7 +227,7 @@ func (c *FederatedTypeCrudTester) CheckUpdate(ctx context.Context, immediate boo
 func (c *FederatedTypeCrudTester) CheckPlacementChange(ctx context.Context, immediate bool, fedObject *unstructured.Unstructured) {
 	apiResource := c.typeConfig.GetFederatedType()
 	kind := apiResource.Kind
-	qualifiedName := util.NewQualifiedName(fedObject)
+	qualifiedName := utils.NewQualifiedName(fedObject)
 
 	// Any cluster can be removed for non-namespace targets.
 	clusterNameToRemove := ""
@@ -239,7 +239,7 @@ func (c *FederatedTypeCrudTester) CheckPlacementChange(ctx context.Context, imme
 
 	c.tl.Logf("Updating %s %q", kind, qualifiedName)
 	updatedFedObject, err := c.updateObject(ctx, apiResource, fedObject, func(obj *unstructured.Unstructured) {
-		clusterNames, err := util.GetClusterNames(obj)
+		clusterNames, err := utils.GetClusterNames(obj)
 		if err != nil {
 			c.tl.Fatalf("Error retrieving cluster names: %v", err)
 		}
@@ -251,7 +251,7 @@ func (c *FederatedTypeCrudTester) CheckPlacementChange(ctx context.Context, imme
 			// cluster whose name was removed.
 			c.tl.Fatalf("Expected %d cluster names, got %d", len(clusterNames)-1, len(updatedClusterNames))
 		}
-		err = util.SetClusterNames(obj, updatedClusterNames)
+		err = utils.SetClusterNames(obj, updatedClusterNames)
 		if err != nil {
 			c.tl.Fatalf("Error setting cluster names for %s %q: %v", kind, qualifiedName, err)
 		}
@@ -266,14 +266,14 @@ func (c *FederatedTypeCrudTester) CheckPlacementChange(ctx context.Context, imme
 func (c *FederatedTypeCrudTester) CheckDelete(ctx context.Context, immediate bool, fedObject *unstructured.Unstructured, orphanDependents bool) {
 	apiResource := c.typeConfig.GetFederatedType()
 	federatedKind := apiResource.Kind
-	qualifiedName := util.NewQualifiedName(fedObject)
+	qualifiedName := utils.NewQualifiedName(fedObject)
 	name := qualifiedName.Name
 	namespace := qualifiedName.Namespace
 
 	resourceClient := c.resourceClient(apiResource)
 
 	if orphanDependents {
-		orphanKey := util.OrphanManagedResourcesAnnotation
+		orphanKey := utils.OrphanManagedResourcesAnnotation
 		err := wait.PollUntilContextTimeout(ctx, c.waitInterval, wait.ForeverTestTimeout, immediate, func(ctx context.Context) (bool, error) {
 			var err error
 			if fedObject == nil {
@@ -283,10 +283,10 @@ func (c *FederatedTypeCrudTester) CheckDelete(ctx context.Context, immediate boo
 					return false, nil
 				}
 			}
-			if util.IsOrphaningEnabled(fedObject) {
+			if utils.IsOrphaningEnabled(fedObject) {
 				return true, nil
 			}
-			util.EnableOrphaning(fedObject)
+			utils.EnableOrphaning(fedObject)
 			fedObject, err = resourceClient.Resources(namespace).Update(context.Background(), fedObject, metav1.UpdateOptions{})
 			if err == nil {
 				return true, nil
@@ -330,17 +330,17 @@ func (c *FederatedTypeCrudTester) CheckDelete(ctx context.Context, immediate boo
 
 	if c.targetIsNamespace {
 		namespace = ""
-		qualifiedName = util.QualifiedName{Name: name}
+		qualifiedName = utils.QualifiedName{Name: name}
 	}
 
 	targetKind := c.typeConfig.GetTargetType().Kind
 
 	// TODO(marun) Consider using informer to detect expected deletion state.
-	var stateMsg string = "unlabeled"
+	var stateMsg = "unlabeled"
 	if deletingInCluster {
 		stateMsg = "not present"
 	}
-	clusters, err := util.ComputePlacement(fedObject, c.getClusters(), false)
+	clusters, err := utils.ComputePlacement(fedObject, c.getClusters(), false)
 	if err != nil {
 		c.tl.Fatalf("Couldn't retrieve clusters for %s/%s: %v", federatedKind, name, err)
 	}
@@ -348,8 +348,8 @@ func (c *FederatedTypeCrudTester) CheckDelete(ctx context.Context, immediate boo
 		if !clusters.Has(clusterName) {
 			continue
 		}
-		namespace = util.QualifiedNameForCluster(clusterName, qualifiedName).Namespace
-		err = wait.PollImmediate(c.waitInterval, waitTimeout, func() (bool, error) {
+		namespace = utils.QualifiedNameForCluster(clusterName, qualifiedName).Namespace
+		err = wait.PollUntilContextTimeout(ctx, c.waitInterval, waitTimeout, immediate, func(ctx context.Context) (bool, error) {
 			obj, err := testCluster.Client.Resources(namespace).Get(context.Background(), name, metav1.GetOptions{})
 			switch {
 			case !deletingInCluster && apierrors.IsNotFound(err):
@@ -358,12 +358,12 @@ func (c *FederatedTypeCrudTester) CheckDelete(ctx context.Context, immediate boo
 				if c.targetIsNamespace && clusterName == c.getPrimaryClusterName() {
 					// A namespace in the host cluster should have the
 					// managed label removed instead of being deleted.
-					return !util.HasManagedLabel(obj), nil
+					return !utils.HasManagedLabel(obj), nil
 				}
 				// Continue checking for deletion or label removal
 				return false, nil
 			case !deletingInCluster && err == nil:
-				return !util.HasManagedLabel(obj), nil
+				return !utils.HasManagedLabel(obj), nil
 			case err != nil && !apierrors.IsNotFound(err):
 				c.tl.Errorf("Error while checking whether %s %q is %s in cluster %q: %v", targetKind, qualifiedName, stateMsg, clusterName, err)
 				// This error may be recoverable
@@ -380,10 +380,10 @@ func (c *FederatedTypeCrudTester) CheckDelete(ctx context.Context, immediate boo
 
 func (c *FederatedTypeCrudTester) SetDeleteOption(ctx context.Context, immediate bool, fedObject *unstructured.Unstructured, opts ...client.DeleteOption) {
 	apiResource := c.typeConfig.GetFederatedType()
-	qualifiedName := util.NewQualifiedName(fedObject)
+	qualifiedName := utils.NewQualifiedName(fedObject)
 	kind := apiResource.Kind
 	_, err := c.updateObject(ctx, apiResource, fedObject, func(obj *unstructured.Unstructured) {
-		err := util.ApplyDeleteOptions(obj, opts...)
+		err := utils.ApplyDeleteOptions(obj, opts...)
 		if err != nil {
 			c.tl.Fatalf("Error apply delete options for %s %q: %v", kind, qualifiedName, err)
 		}
@@ -439,7 +439,7 @@ func (c *FederatedTypeCrudTester) CheckReplicaSet(ctx context.Context, immediate
 }
 
 func (c *FederatedTypeCrudTester) getClusters() []*v1beta1.KubeFedCluster {
-	client, err := genericclient.New(c.kubeConfig)
+	genericClient, err := genericclient.New(c.kubeConfig)
 	if err != nil {
 		c.tl.Fatalf("Failed to get kubefed clientset: %v", err)
 	}
@@ -447,7 +447,7 @@ func (c *FederatedTypeCrudTester) getClusters() []*v1beta1.KubeFedCluster {
 	var fedClusters []*v1beta1.KubeFedCluster
 	for cluster := range c.testClusters {
 		clusterResource := &v1beta1.KubeFedCluster{}
-		err = client.Get(context.Background(), clusterResource, c.clustersNamespace, cluster)
+		err = genericClient.Get(context.Background(), clusterResource, c.clustersNamespace, cluster)
 		if err != nil {
 			c.tl.Fatalf("Cannot get cluster %s: %v", cluster, err)
 		}
@@ -459,9 +459,9 @@ func (c *FederatedTypeCrudTester) getClusters() []*v1beta1.KubeFedCluster {
 // CheckPropagation checks propagation for the crud tester's clients
 func (c *FederatedTypeCrudTester) CheckPropagation(ctx context.Context, immediate bool, fedObject *unstructured.Unstructured) {
 	federatedKind := c.typeConfig.GetFederatedType().Kind
-	qualifiedName := util.NewQualifiedName(fedObject)
+	qualifiedName := utils.NewQualifiedName(fedObject)
 
-	selectedClusters, err := util.ComputePlacement(fedObject, c.getClusters(), false)
+	selectedClusters, err := utils.ComputePlacement(fedObject, c.getClusters(), false)
 	if err != nil {
 		c.tl.Fatalf("Error retrieving cluster names for %s %q: %v", federatedKind, qualifiedName, err)
 	}
@@ -476,7 +476,7 @@ func (c *FederatedTypeCrudTester) CheckPropagation(ctx context.Context, immediat
 		c.tl.Fatalf("Error computing override hash for %s %q: %v", federatedKind, qualifiedName, err)
 	}
 
-	overridesMap, err := util.GetOverrides(fedObject)
+	overridesMap, err := utils.GetOverrides(fedObject)
 	if err != nil {
 		c.tl.Fatalf("Error reading cluster overrides for %s %q: %v", federatedKind, qualifiedName, err)
 	}
@@ -486,7 +486,7 @@ func (c *FederatedTypeCrudTester) CheckPropagation(ctx context.Context, immediat
 	// TODO(marun) run checks in parallel
 	primaryClusterName := c.getPrimaryClusterName()
 	for clusterName, testCluster := range c.testClusters {
-		targetName := util.QualifiedNameForCluster(clusterName, qualifiedName)
+		targetName := utils.QualifiedNameForCluster(clusterName, qualifiedName)
 
 		objExpected := selectedClusters.Has(clusterName)
 
@@ -557,7 +557,7 @@ func (c *FederatedTypeCrudTester) CheckPropagation(ctx context.Context, immediat
 // reflects the expected propagation state.
 func (c *FederatedTypeCrudTester) checkFederatedStatus(fedObject *unstructured.Unstructured, clusterName string, objExpected bool) (bool, error) {
 	federatedKind := fedObject.GetKind()
-	qualifiedName := util.NewQualifiedName(fedObject)
+	qualifiedName := utils.NewQualifiedName(fedObject)
 
 	// Retrieve the resource from the API to ensure the latest status
 	// is considered.
@@ -616,7 +616,7 @@ func (c *FederatedTypeCrudTester) checkFederatedStatus(fedObject *unstructured.U
 	return true, nil
 }
 
-func (c *FederatedTypeCrudTester) checkHostNamespaceUnlabeled(ctx context.Context, immediate bool, client util.ResourceClient, qualifiedName util.QualifiedName, targetKind, clusterName string) {
+func (c *FederatedTypeCrudTester) checkHostNamespaceUnlabeled(ctx context.Context, immediate bool, client utils.ResourceClient, qualifiedName utils.QualifiedName, targetKind, clusterName string) {
 	// A namespace in the host cluster should end up unlabeled instead of
 	// deleted when it is not targeted by placement.
 
@@ -627,14 +627,14 @@ func (c *FederatedTypeCrudTester) checkHostNamespaceUnlabeled(ctx context.Contex
 			return false, nil
 		}
 		// Validate that the namespace is without the managed label
-		return !util.HasManagedLabel(hostNamespace), nil
+		return !utils.HasManagedLabel(hostNamespace), nil
 	})
 	if err != nil {
 		c.tl.Fatalf("Timeout verifying removal of managed label from %s %q in host cluster %q: %v", targetKind, qualifiedName, clusterName, err)
 	}
 }
 
-func (c *FederatedTypeCrudTester) waitForResource(ctx context.Context, immediate bool, client util.ResourceClient, qualifiedName util.QualifiedName, expectedOverrides util.ClusterOverrides, expectedVersionFunc func() string) error {
+func (c *FederatedTypeCrudTester) waitForResource(ctx context.Context, immediate bool, client utils.ResourceClient, qualifiedName utils.QualifiedName, expectedOverrides utils.ClusterOverrides, expectedVersionFunc func() string) error {
 	err := wait.PollUntilContextTimeout(ctx, c.waitInterval, c.clusterWaitTimeout, immediate, func(ctx context.Context) (done bool, err error) {
 		expectedVersion := expectedVersionFunc()
 		if len(expectedVersion) == 0 {
@@ -642,13 +642,13 @@ func (c *FederatedTypeCrudTester) waitForResource(ctx context.Context, immediate
 		}
 
 		clusterObj, err := client.Resources(qualifiedName.Namespace).Get(context.Background(), qualifiedName.Name, metav1.GetOptions{})
-		if err == nil && util.ObjectVersion(clusterObj) == expectedVersion {
+		if err == nil && utils.ObjectVersion(clusterObj) == expectedVersion {
 			// Validate that the resource has been labeled properly,
 			// indicating creation or adoption by the sync controller.  This
 			// labeling also ensures that the federated informer will be able
 			// to cache the resource.
-			if !util.HasManagedLabel(clusterObj) {
-				c.tl.Errorf("Expected resource to be labeled with %q", fmt.Sprintf("%s: %s", util.ManagedByKubeFedLabelKey, util.ManagedByKubeFedLabelValue))
+			if !utils.HasManagedLabel(clusterObj) {
+				c.tl.Errorf("Expected resource to be labeled with %q", fmt.Sprintf("%s: %s", utils.ManagedByKubeFedLabelKey, utils.ManagedByKubeFedLabelValue))
 				return false, nil
 			}
 
@@ -656,7 +656,7 @@ func (c *FederatedTypeCrudTester) waitForResource(ctx context.Context, immediate
 			if len(expectedOverrides) > 0 {
 				expectedClusterObject := clusterObj.DeepCopy()
 				// Applying overrides on copy of received cluster object should not change the cluster object if the overrides are properly applied.
-				if err = util.ApplyJSONPatch(expectedClusterObject, expectedOverrides); err != nil {
+				if err = utils.ApplyJSONPatch(expectedClusterObject, expectedOverrides); err != nil {
 					c.tl.Fatalf("Failed to apply json patch: %v", err)
 				}
 
@@ -698,7 +698,7 @@ func (c *FederatedTypeCrudTester) TestClusters() map[string]TestCluster {
 	return c.testClusters
 }
 
-func (c *FederatedTypeCrudTester) waitForResourceDeletion(ctx context.Context, immediate bool, client util.ResourceClient, qualifiedName util.QualifiedName, versionRemoved func() bool) error {
+func (c *FederatedTypeCrudTester) waitForResourceDeletion(ctx context.Context, immediate bool, client utils.ResourceClient, qualifiedName utils.QualifiedName, versionRemoved func() bool) error {
 	err := wait.PollUntilContextTimeout(ctx, c.waitInterval, c.clusterWaitTimeout, immediate, func(ctx context.Context) (done bool, err error) {
 		_, err = client.Resources(qualifiedName.Namespace).Get(context.Background(), qualifiedName.Name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
@@ -717,17 +717,17 @@ func (c *FederatedTypeCrudTester) waitForResourceDeletion(ctx context.Context, i
 }
 
 func (c *FederatedTypeCrudTester) updateObject(ctx context.Context, apiResource metav1.APIResource, obj *unstructured.Unstructured, mutateResourceFunc func(*unstructured.Unstructured)) (*unstructured.Unstructured, error) {
-	client := c.resourceClient(apiResource)
+	resourceClient := c.resourceClient(apiResource)
 	var updatedObj *unstructured.Unstructured
 	err := wait.PollUntilContextTimeout(ctx, c.waitInterval, wait.ForeverTestTimeout, false, func(ctx context.Context) (bool, error) {
 		mutateResourceFunc(obj)
 
 		var err error
-		updatedObj, err = client.Resources(obj.GetNamespace()).Update(context.Background(), obj, metav1.UpdateOptions{})
+		updatedObj, err = resourceClient.Resources(obj.GetNamespace()).Update(context.Background(), obj, metav1.UpdateOptions{})
 		if apierrors.IsConflict(err) {
 			// The resource was updated by the KubeFed controller.
 			// Get the latest version and retry.
-			obj, err = client.Resources(obj.GetNamespace()).Get(context.Background(), obj.GetName(), metav1.GetOptions{})
+			obj, err = resourceClient.Resources(obj.GetNamespace()).Get(context.Background(), obj.GetName(), metav1.GetOptions{})
 			return false, err
 		}
 		// Be tolerant of a slow server
@@ -740,9 +740,9 @@ func (c *FederatedTypeCrudTester) updateObject(ctx context.Context, apiResource 
 }
 
 // expectedVersion retrieves the version of the resource expected in the named cluster
-func (c *FederatedTypeCrudTester) expectedVersion(ctx context.Context, immediate bool, qualifiedName util.QualifiedName, templateVersion, overrideVersion, clusterName string) (string, bool) {
+func (c *FederatedTypeCrudTester) expectedVersion(ctx context.Context, immediate bool, qualifiedName utils.QualifiedName, templateVersion, overrideVersion, clusterName string) (string, bool) {
 	targetKind := c.typeConfig.GetTargetType().Kind
-	versionName := util.QualifiedName{
+	versionName := utils.QualifiedName{
 		Namespace: qualifiedName.Namespace,
 		Name:      common.PropagatedVersionName(targetKind, qualifiedName.Name),
 	}
@@ -823,7 +823,7 @@ func (c *FederatedTypeCrudTester) CheckRemoteStatus(ctx context.Context, immedia
 		WaitForNamespaceOrDie(c.tl, kubeClient, clusterName, targetObject.GetNamespace(),
 			c.waitInterval, 30*time.Second)
 
-		util.AddManagedLabel(targetObject)
+		utils.AddManagedLabel(targetObject)
 		labeledObj, err := CreateResource(clusterConfig, c.typeConfig.GetTargetType(), targetObject)
 		if err != nil {
 			c.tl.Fatalf("Failed to create labeled resource in cluster %q: %v", clusterName, err)
@@ -842,9 +842,9 @@ func (c *FederatedTypeCrudTester) CheckRemoteStatus(ctx context.Context, immedia
 				return false, nil
 			}
 
-			objStatus = obj.Object[util.StatusField]
+			objStatus = obj.Object[utils.StatusField]
 			c.tl.Logf("Show kubefed cluster object status: %v", objStatus)
-			return obj.Object[util.StatusField] != nil, nil
+			return obj.Object[utils.StatusField] != nil, nil
 		})
 		if err != nil {
 			c.tl.Fatal("Timed out waiting for the resource to have a status field")
@@ -870,7 +870,7 @@ func (c *FederatedTypeCrudTester) CheckRemoteStatus(ctx context.Context, immedia
 
 func (c *FederatedTypeCrudTester) getRemoteStatus(ctx context.Context, immediate bool, fedObject *unstructured.Unstructured, clusterName string) (interface{}, error) {
 	apiResource := c.typeConfig.GetFederatedType()
-	qualifiedName := util.NewQualifiedName(fedObject)
+	qualifiedName := utils.NewQualifiedName(fedObject)
 
 	resourceClient := c.resourceClient(apiResource)
 	var remoteStatusObj interface{}
@@ -884,7 +884,7 @@ func (c *FederatedTypeCrudTester) getRemoteStatus(ctx context.Context, immediate
 		}
 
 		resource := &status.GenericFederatedResource{}
-		err = util.UnstructuredToInterface(fedObj, resource)
+		err = utils.UnstructuredToInterface(fedObj, resource)
 		if err != nil {
 			return false, err
 		}
@@ -911,7 +911,7 @@ func (c *FederatedTypeCrudTester) getRemoteStatus(ctx context.Context, immediate
 	return remoteStatusObj, nil
 }
 
-func (c *FederatedTypeCrudTester) CheckStatusCreated(ctx context.Context, immediate bool, qualifiedName util.QualifiedName) {
+func (c *FederatedTypeCrudTester) CheckStatusCreated(ctx context.Context, immediate bool, qualifiedName utils.QualifiedName) {
 	if !c.typeConfig.GetStatusEnabled() {
 		return
 	}
@@ -944,7 +944,7 @@ func (c *FederatedTypeCrudTester) CheckStatusCreated(ctx context.Context, immedi
 // GetGenericResource retrieves a federated resource and converts it to
 // the generic resource struct.
 func GetGenericResource(client genericclient.Client, gvk schema.GroupVersionKind,
-	qualifiedName util.QualifiedName) (*status.GenericFederatedResource, error) {
+	qualifiedName utils.QualifiedName) (*status.GenericFederatedResource, error) {
 	fedObject := &unstructured.Unstructured{}
 	fedObject.SetGroupVersionKind(gvk)
 	err := client.Get(context.TODO(), fedObject, qualifiedName.Namespace, qualifiedName.Name)
@@ -953,7 +953,7 @@ func GetGenericResource(client genericclient.Client, gvk schema.GroupVersionKind
 	}
 
 	resource := &status.GenericFederatedResource{}
-	err = util.UnstructuredToInterface(fedObject, resource)
+	err = utils.UnstructuredToInterface(fedObject, resource)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to unmarshall federated resource to generic resource struct")
 	}

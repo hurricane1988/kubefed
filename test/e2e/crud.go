@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
 	"sigs.k8s.io/kubefed/pkg/controller/sync/status"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/federate"
 	"sigs.k8s.io/kubefed/test/common"
 	"sigs.k8s.io/kubefed/test/e2e/framework"
@@ -72,7 +72,7 @@ var _ = Describe("Federated", func() {
 					It("should be created, read its remote status and deleted successfully", func() {
 						kubeFedConfig := &v1beta1.KubeFedConfig{}
 						client := genericclient.NewForConfigOrDie(f.KubeConfig())
-						err := client.Get(context.TODO(), kubeFedConfig, f.KubeFedSystemNamespace(), util.KubeFedConfigName)
+						err := client.Get(context.TODO(), kubeFedConfig, f.KubeFedSystemNamespace(), utils.KubeFedConfigName)
 						if err != nil {
 							tl.Fatalf("Error collecting the kubefedconfig file: %v", err)
 						}
@@ -113,7 +113,7 @@ var _ = Describe("Federated", func() {
 				By(fmt.Sprintf("Creating a %s whose containing namespace is not federated", kind))
 				fedObject := crudTester.Create(targetObject, overrides, nil)
 
-				qualifiedName := util.NewQualifiedName(fedObject)
+				qualifiedName := utils.NewQualifiedName(fedObject)
 
 				By(fmt.Sprintf("Waiting until the status of the %s %q indicates NamespaceNotFederated", kind, qualifiedName))
 				client := genericclient.NewForConfigOrDie(f.KubeConfig())
@@ -162,7 +162,7 @@ var _ = Describe("Federated", func() {
 					framework.PollInterval, framework.TestContext.SingleCallTimeout)
 
 				By("Creating a labeled resource in the selected cluster")
-				util.AddManagedLabel(targetObject)
+				utils.AddManagedLabel(targetObject)
 				labeledObj, err := common.CreateResource(clusterConfig, typeConfig.GetTargetType(), targetObject)
 				if err != nil {
 					tl.Fatalf("Failed to create labeled resource in cluster %q: %v", clusterName, err)
@@ -184,7 +184,7 @@ var _ = Describe("Federated", func() {
 						tl.Errorf("Error retrieving labeled resource: %v", err)
 						return false, nil
 					}
-					return !util.HasManagedLabel(obj), nil
+					return !utils.HasManagedLabel(obj), nil
 				})
 				if err != nil {
 					tl.Fatal("Timed out waiting for the managed label to be removed")
@@ -228,7 +228,7 @@ var _ = Describe("Federated", func() {
 				if err != nil {
 					tl.Fatalf("Error generating federated resource: %v", err)
 				}
-				err = util.SetClusterNames(fedObject, []string{})
+				err = utils.SetClusterNames(fedObject, []string{})
 				if err != nil {
 					tl.Fatalf("Error setting cluster names for federated resource: %v", err)
 				}
@@ -254,7 +254,7 @@ var _ = Describe("Federated", func() {
 					obj.SetGroupVersionKind(unlabeledObj.GroupVersionKind())
 					err := clusterClient.Get(context.TODO(), obj, unlabeledObj.GetNamespace(), unlabeledObj.GetName())
 					if apierrors.IsNotFound(err) {
-						tl.Fatalf("Unlabeled resource %s %q was deleted", typeConfig.GetTargetType().Kind, util.NewQualifiedName(unlabeledObj))
+						tl.Fatalf("Unlabeled resource %s %q was deleted", typeConfig.GetTargetType().Kind, utils.NewQualifiedName(unlabeledObj))
 					}
 					if err != nil {
 						tl.Errorf("Error retrieving unlabeled resource: %v", err)
@@ -301,7 +301,7 @@ func getCrudTestInput(f framework.KubeFedFramework, tl common.TestLogger,
 		if err != nil {
 			return nil, nil, err
 		}
-		if typeConfig.GetTargetType().Kind == util.NamespaceKind {
+		if typeConfig.GetTargetType().Kind == utils.NamespaceKind {
 			// Namespace crud testing needs to have the same name as its namespace.
 			targetObject.SetName(namespace)
 			targetObject.SetNamespace(namespace)
@@ -352,7 +352,7 @@ func initCrudTestWithPropagation(f framework.KubeFedFramework, tl common.TestLog
 	namespace := ""
 	// A test namespace is only required for namespaced resources or
 	// namespaces themselves.
-	if typeConfig.GetNamespaced() || typeConfig.GetTargetType().Name == util.NamespaceName {
+	if typeConfig.GetNamespaced() || typeConfig.GetTargetType().Name == utils.NamespaceName {
 		namespace = f.TestNamespaceName()
 	}
 

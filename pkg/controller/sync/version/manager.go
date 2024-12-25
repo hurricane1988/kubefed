@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,54 +37,60 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/common"
 	fedv1a1 "sigs.k8s.io/kubefed/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 // VersionedResource defines the methods a federated resource must
 // implement to allow versions to be tracked by the VersionManager.
 type VersionedResource interface {
-	FederatedName() util.QualifiedName
+	FederatedName() utils.QualifiedName
 	Object() *unstructured.Unstructured
 	TemplateVersion() (string, error)
 	OverrideVersion() (string, error)
 }
 
-type VersionManager struct {
+// Manager is a structure that manages the synchronization and propagation of versions for different resources in a federated environment.
+// It uses the sync.RWMutex to ensure thread-safe access to its properties.
+type Manager struct {
 	sync.RWMutex
-
+	// targetKind represents the kind of the target resource that the Manager focuses on managing and propagating versions for.
 	targetKind string
-
+	// federatedKind represents the kind of the federated resource associated with the target resource.
 	federatedKind string
-
 	// Namespace to source propagated versions from
 	namespace string
-
-	adapter VersionAdapter
-
+	// adapter is an instance of the Adapter interface, used for interacting with underlying storage or APIs.
+	adapter Adapter
+	// hasSynced indicates whether the Manager has completed its initial synchronization.
 	hasSynced bool
-
+	// versions is a map that caches version objects, keyed by their identifiers.
 	versions map[string]runtimeclient.Object
-
+	// client is a generic client instance used for interacting with the API server.
 	client generic.Client
+	// ctx is the context that governs the Manager's operations, allowing for graceful shutdowns or cancellations.
+	ctx context.Context
+	// immediate indicates whether the Manager should propagate version information immediately or wait for a synchronization cycle.
+	immediate bool
 }
 
-func NewVersionManager(c generic.Client, namespaced bool, federatedKind, targetKind, namespace string) *VersionManager {
-	v := &VersionManager{
+func NewVersionManager(ctx context.Context, immediate bool, c generic.Client, namespaced bool, federatedKind, targetKind, namespace string) *Manager {
+	v := &Manager{
 		targetKind:    targetKind,
 		federatedKind: federatedKind,
 		namespace:     namespace,
 		adapter:       NewVersionAdapter(namespaced),
 		versions:      make(map[string]runtimeclient.Object),
 		client:        c,
+		ctx:           ctx,
+		immediate:     immediate,
 	}
-
 	return v
 }
 
 // Sync retrieves propagated versions from the api and loads it into
 // memory.
-func (m *VersionManager) Sync(stopChan <-chan struct{}) {
-	versionList, ok := m.list(stopChan)
+func (m *Manager) Sync(stopChan <-chan struct{}) {
+	versionList, ok := m.list(context.TODO())
 	if !ok {
 		return
 	}
@@ -93,7 +99,7 @@ func (m *VersionManager) Sync(stopChan <-chan struct{}) {
 
 // HasSynced indicates whether the manager's in-memory state has been
 // synced with the api.
-func (m *VersionManager) HasSynced() bool {
+func (m *Manager) HasSynced() bool {
 	m.RLock()
 	defer m.RUnlock()
 	return m.hasSynced
@@ -101,7 +107,7 @@ func (m *VersionManager) HasSynced() bool {
 
 // Get retrieves a mapping of cluster names to versions for the given
 // versioned resource.
-func (m *VersionManager) Get(resource VersionedResource) (map[string]string, error) {
+func (m *Manager) Get(resource VersionedResource) (map[string]string, error) {
 	versionMap := make(map[string]string)
 
 	qualifiedName := m.versionQualifiedName(resource.FederatedName())
@@ -134,7 +140,7 @@ func (m *VersionManager) Get(resource VersionedResource) (map[string]string, err
 
 // Update ensures that the propagated version for the given versioned
 // resource is recorded.
-func (m *VersionManager) Update(resource VersionedResource,
+func (m *Manager) Update(resource VersionedResource,
 	selectedClusters []string, versionMap map[string]string) error {
 	templateVersion, err := resource.TemplateVersion()
 	if err != nil {
@@ -161,7 +167,7 @@ func (m *VersionManager) Update(resource VersionedResource,
 		}
 		clusterVersions = updateClusterVersions(clusterVersions, versionMap, selectedClusters)
 	} else {
-		clusterVersions = VersionMapToClusterVersions(versionMap)
+		clusterVersions = MapToClusterVersions(versionMap)
 	}
 
 	status := &fedv1a1.PropagatedVersionStatus{
@@ -170,7 +176,7 @@ func (m *VersionManager) Update(resource VersionedResource,
 		ClusterVersions: clusterVersions,
 	}
 
-	if oldStatus != nil && util.PropagatedVersionStatusEquivalent(oldStatus, status) {
+	if oldStatus != nil && utils.PropagatedVersionStatusEquivalent(oldStatus, status) {
 		m.Unlock()
 		klog.V(4).Infof("No update necessary for %s %q", m.adapter.TypeName(), qualifiedName)
 		return nil
@@ -196,33 +202,32 @@ func (m *VersionManager) Update(resource VersionedResource,
 // Versions are written to the API with an owner reference to the
 // versioned resource, and they should be removed by the garbage
 // collector when the resource is removed.
-func (m *VersionManager) Delete(qualifiedName util.QualifiedName) {
+func (m *Manager) Delete(qualifiedName utils.QualifiedName) {
 	versionQualifiedName := m.versionQualifiedName(qualifiedName)
 	m.Lock()
 	delete(m.versions, versionQualifiedName.String())
 	m.Unlock()
 }
 
-func (m *VersionManager) list(stopChan <-chan struct{}) (runtimeclient.ObjectList, bool) {
-	// Attempt retrieval of list of versions until success or the channel is closed.
+func (m *Manager) list(ctx context.Context) (runtimeclient.ObjectList, bool) {
+	// Attempt retrieval of list of versions until success or context is cancelled.
 	var versionList runtimeclient.ObjectList
-	err := wait.PollImmediateInfinite(1*time.Second, func() (bool, error) {
-		select {
-		case <-stopChan:
-			klog.V(4).Infof("Halting version manager list due to closed stop channel")
-			return false, errors.New("")
-		default:
-		}
+	err := wait.PollUntilContextCancel(ctx, 1*time.Second, true, func(ctx context.Context) (bool, error) {
 		versionList = m.adapter.NewListObject()
-		err := m.client.List(context.TODO(), versionList, m.namespace)
+		err := m.client.List(ctx, versionList, m.namespace)
 		if err != nil {
-			runtime.HandleError(errors.Wrapf(err, "Failed to list propagated versions for %q", m.federatedKind))
+			klog.Errorf("Failed to list propagated versions for %q: %v", m.federatedKind, err)
 			// Do not return the error to allow the operation to be retried.
 			return false, nil
 		}
 		return true, nil
 	})
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			klog.V(4).Infof("Halting version manager list due to context cancellation")
+		} else {
+			klog.Errorf("Error during list operation: %v", err)
+		}
 		return nil, false
 	}
 	return versionList, true
@@ -231,7 +236,7 @@ func (m *VersionManager) list(stopChan <-chan struct{}) (runtimeclient.ObjectLis
 // load processes a list of versions into in-memory cache.  Since the
 // version manager should not be used in advance of HasSynced
 // returning true, locking is assumed to be unnecessary.
-func (m *VersionManager) load(versionList runtimeclient.ObjectList, stopChan <-chan struct{}) bool {
+func (m *Manager) load(versionList runtimeclient.ObjectList, stopChan <-chan struct{}) bool {
 	typePrefix := common.PropagatedVersionPrefix(m.targetKind)
 	items, err := meta.ExtractList(versionList)
 	if err != nil {
@@ -246,7 +251,7 @@ func (m *VersionManager) load(versionList runtimeclient.ObjectList, stopChan <-c
 		default:
 		}
 
-		qualifiedName := util.NewQualifiedName(obj.(runtimeclient.Object))
+		qualifiedName := utils.NewQualifiedName(obj.(runtimeclient.Object))
 		// Ignore propagated version for other types
 		if strings.HasPrefix(qualifiedName.Name, typePrefix) {
 			m.versions[qualifiedName.String()] = obj.(runtimeclient.Object)
@@ -261,9 +266,9 @@ func (m *VersionManager) load(versionList runtimeclient.ObjectList, stopChan <-c
 
 // versionQualifiedName derives the qualified name of a version
 // resource from the qualified name of a template or target resource.
-func (m *VersionManager) versionQualifiedName(qualifiedName util.QualifiedName) util.QualifiedName {
+func (m *Manager) versionQualifiedName(qualifiedName utils.QualifiedName) utils.QualifiedName {
 	versionName := common.PropagatedVersionName(m.targetKind, qualifiedName.Name)
-	return util.QualifiedName{Name: versionName, Namespace: qualifiedName.Namespace}
+	return utils.QualifiedName{Name: versionName, Namespace: qualifiedName.Namespace}
 }
 
 // writeVersion serializes the current state of the named propagated
@@ -274,7 +279,8 @@ func (m *VersionManager) versionQualifiedName(qualifiedName util.QualifiedName) 
 // resource is updated by at most one thread at a time.  This should
 // guarantee safe manipulation of an object retrieved from the
 // version map.
-func (m *VersionManager) writeVersion(obj runtimeclient.Object, qualifiedName util.QualifiedName) error {
+func (m *Manager) writeVersion(obj runtimeclient.Object, qualifiedName utils.QualifiedName) error {
+	var err error
 	key := qualifiedName.String()
 	adapterType := m.adapter.TypeName()
 
@@ -288,7 +294,6 @@ func (m *VersionManager) writeVersion(obj runtimeclient.Object, qualifiedName ut
 	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, waitDuration, false, func(ctx context.Context) (done bool, err error) {
 		if refreshVersion {
 			// Version was written to the API by another process after the last manager write.
-			var err error
 			resourceVersion, err = m.getResourceVersionFromAPI(qualifiedName)
 			if err != nil {
 				runtime.HandleError(errors.Wrapf(err, "Failed to refresh the resourceVersion for %s %q from the API", adapterType, key))
@@ -301,7 +306,7 @@ func (m *VersionManager) writeVersion(obj runtimeclient.Object, qualifiedName ut
 			// Version resource needs to be created
 
 			createdObj := obj.DeepCopyObject().(runtimeclient.Object)
-			err := setResourceVersion(createdObj, "")
+			err = setResourceVersion(createdObj, "")
 			if err != nil {
 				runtime.HandleError(errors.Wrapf(err, "Failed to clear the resourceVersion for %s %q", adapterType, key))
 				return false, nil
@@ -388,7 +393,7 @@ func (m *VersionManager) writeVersion(obj runtimeclient.Object, qualifiedName ut
 	return nil
 }
 
-func (m *VersionManager) getResourceVersionFromAPI(qualifiedName util.QualifiedName) (string, error) {
+func (m *Manager) getResourceVersionFromAPI(qualifiedName utils.QualifiedName) (string, error) {
 	klog.V(4).Infof("Retrieving resourceVersion for %s %q from the API", m.federatedKind, qualifiedName)
 	obj := m.adapter.NewObject()
 	err := m.client.Get(context.TODO(), obj, qualifiedName.Namespace, qualifiedName.Name)
@@ -438,11 +443,11 @@ func updateClusterVersions(oldVersions []fedv1a1.ClusterObjectVersion,
 		}
 	}
 
-	return VersionMapToClusterVersions(newVersions)
+	return MapToClusterVersions(newVersions)
 }
 
-func VersionMapToClusterVersions(versionMap map[string]string) []fedv1a1.ClusterObjectVersion {
-	clusterVersions := []fedv1a1.ClusterObjectVersion{}
+func MapToClusterVersions(versionMap map[string]string) []fedv1a1.ClusterObjectVersion {
+	var clusterVersions []fedv1a1.ClusterObjectVersion
 	for clusterName, version := range versionMap {
 		// Lack of version indicates deletion
 		if version == "" {
@@ -453,6 +458,6 @@ func VersionMapToClusterVersions(versionMap map[string]string) []fedv1a1.Cluster
 			Version:     version,
 		})
 	}
-	util.SortClusterVersions(clusterVersions)
+	utils.SortClusterVersions(clusterVersions)
 	return clusterVersions
 }

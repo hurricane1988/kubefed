@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/metrics"
 )
 
@@ -52,10 +52,10 @@ const (
 type KubeFedStatusController struct {
 	// For triggering reconciliation of all target resources. This is
 	// used when a new cluster becomes available.
-	clusterDeliverer *util.DelayingDeliverer
+	clusterDeliverer *utils.DelayingDeliverer
 
 	// Informer for resources in member clusters
-	informer util.FederatedInformer
+	informer utils.FederatedInformer
 
 	// Store for the federated type
 	federatedStore cache.Store
@@ -67,7 +67,7 @@ type KubeFedStatusController struct {
 	// Informer for the status of the federated type
 	statusController cache.Controller
 
-	worker util.ReconcileWorker
+	worker utils.ReconcileWorker
 
 	clusterAvailableDelay   time.Duration
 	clusterUnavailableDelay time.Duration
@@ -78,13 +78,16 @@ type KubeFedStatusController struct {
 	typeConfig typeconfig.Interface
 
 	client       genericclient.Client
-	statusClient util.ResourceClient
+	statusClient utils.ResourceClient
 
 	fedNamespace string
+
+	ctx       context.Context
+	immediate bool
 }
 
 // StartKubeFedStatusController starts a new status controller for a type config
-func StartKubeFedStatusController(controllerConfig *util.ControllerConfig, stopChan <-chan struct{}, typeConfig typeconfig.Interface) error {
+func StartKubeFedStatusController(controllerConfig *utils.ControllerConfig, stopChan <-chan struct{}, typeConfig typeconfig.Interface) error {
 	controller, err := newKubeFedStatusController(controllerConfig, typeConfig)
 	if err != nil {
 		return err
@@ -98,7 +101,7 @@ func StartKubeFedStatusController(controllerConfig *util.ControllerConfig, stopC
 }
 
 // newKubeFedStatusController returns a new status controller for the federated type
-func newKubeFedStatusController(controllerConfig *util.ControllerConfig, typeConfig typeconfig.Interface) (*KubeFedStatusController, error) {
+func newKubeFedStatusController(controllerConfig *utils.ControllerConfig, typeConfig typeconfig.Interface) (*KubeFedStatusController, error) {
 	federatedAPIResource := typeConfig.GetFederatedType()
 	statusAPIResource := typeConfig.GetStatusType()
 	if statusAPIResource == nil {
@@ -109,12 +112,12 @@ func newKubeFedStatusController(controllerConfig *util.ControllerConfig, typeCon
 	restclient.AddUserAgent(kubeConfig, userAgent)
 	client := genericclient.NewForConfigOrDie(kubeConfig)
 
-	federatedTypeClient, err := util.NewResourceClient(kubeConfig, &federatedAPIResource)
+	federatedTypeClient, err := utils.NewResourceClient(kubeConfig, &federatedAPIResource)
 	if err != nil {
 		return nil, err
 	}
 
-	statusClient, err := util.NewResourceClient(kubeConfig, statusAPIResource)
+	statusClient, err := utils.NewResourceClient(kubeConfig, statusAPIResource)
 	if err != nil {
 		return nil, err
 	}
@@ -130,15 +133,15 @@ func newKubeFedStatusController(controllerConfig *util.ControllerConfig, typeCon
 		fedNamespace:            controllerConfig.KubeFedNamespace,
 	}
 
-	s.worker = util.NewReconcileWorker(strings.ToLower(statusAPIResource.Kind), s.reconcile, util.WorkerOptions{
-		WorkerTiming: util.WorkerTiming{
+	s.worker = utils.NewReconcileWorker(strings.ToLower(statusAPIResource.Kind), s.reconcile, utils.WorkerOptions{
+		WorkerTiming: utils.WorkerTiming{
 			ClusterSyncDelay: s.clusterAvailableDelay,
 		},
 		MaxConcurrentReconciles: int(controllerConfig.MaxConcurrentStatusReconciles),
 	})
 
 	// Build deliverer for triggering cluster reconciliations.
-	s.clusterDeliverer = util.NewDelayingDeliverer()
+	s.clusterDeliverer = utils.NewDelayingDeliverer()
 
 	// Start informers on the resources for the federated type
 	enqueueObj := s.worker.EnqueueObject
@@ -146,19 +149,19 @@ func newKubeFedStatusController(controllerConfig *util.ControllerConfig, typeCon
 	targetNamespace := controllerConfig.TargetNamespace
 
 	targetAPIResource := typeConfig.GetTargetType()
-	s.federatedStore, s.federatedController = util.NewResourceInformer(federatedTypeClient, targetNamespace, &federatedAPIResource, enqueueObj)
-	s.statusStore, s.statusController = util.NewResourceInformer(statusClient, targetNamespace, statusAPIResource, enqueueObj)
+	s.federatedStore, s.federatedController = utils.NewResourceInformer(federatedTypeClient, targetNamespace, &federatedAPIResource, enqueueObj)
+	s.statusStore, s.statusController = utils.NewResourceInformer(statusClient, targetNamespace, statusAPIResource, enqueueObj)
 
 	// Federated informer for resources in member clusters
-	s.informer, err = util.NewFederatedInformer(
+	s.informer, err = utils.NewFederatedInformer(
 		controllerConfig,
 		client,
 		&targetAPIResource,
 		func(obj runtimeclient.Object) {
-			qualifiedName := util.NewQualifiedName(obj)
+			qualifiedName := utils.NewQualifiedName(obj)
 			s.worker.EnqueueForRetry(qualifiedName)
 		},
-		&util.ClusterLifecycleHandlerFuncs{
+		&utils.ClusterLifecycleHandlerFuncs{
 			ClusterAvailable: func(cluster *fedv1b1.KubeFedCluster) {
 				// When new cluster becomes available process all the target resources again.
 				s.clusterDeliverer.DeliverAt(allClustersKey, nil, time.Now().Add(s.clusterAvailableDelay))
@@ -189,7 +192,7 @@ func (s *KubeFedStatusController) Run(stopChan <-chan struct{}) {
 	go s.federatedController.Run(stopChan)
 	go s.statusController.Run(stopChan)
 	s.informer.Start()
-	s.clusterDeliverer.StartWithHandler(func(_ *util.DelayingDelivererItem) {
+	s.clusterDeliverer.StartWithHandler(func(_ *utils.DelayingDelivererItem) {
 		s.reconcileOnClusterChange()
 	})
 
@@ -205,7 +208,7 @@ func (s *KubeFedStatusController) Run(stopChan <-chan struct{}) {
 
 // Wait until all data stores are in sync for a definitive timeout, and returns if there is an error or a timeout.
 func (s *KubeFedStatusController) waitForSync() error {
-	return wait.PollImmediate(util.SyncedPollPeriod, s.cacheSyncTimeout, func() (bool, error) {
+	return wait.PollUntilContextTimeout(s.ctx, utils.SyncedPollPeriod, s.cacheSyncTimeout, s.immediate, func(ctx context.Context) (bool, error) {
 		return s.isSynced(), nil
 	})
 }
@@ -244,12 +247,12 @@ func (s *KubeFedStatusController) reconcileOnClusterChange() {
 		s.clusterDeliverer.DeliverAt(allClustersKey, nil, time.Now().Add(s.clusterAvailableDelay))
 	}
 	for _, obj := range s.federatedStore.List() {
-		qualifiedName := util.NewQualifiedName(obj.(runtimeclient.Object))
+		qualifiedName := utils.NewQualifiedName(obj.(runtimeclient.Object))
 		s.worker.EnqueueWithDelay(qualifiedName, s.smallDelay)
 	}
 }
 
-func (s *KubeFedStatusController) reconcile(qualifiedName util.QualifiedName) util.ReconciliationStatus {
+func (s *KubeFedStatusController) reconcile(qualifiedName utils.QualifiedName) utils.ReconciliationStatus {
 	if err := s.waitForSync(); err != nil {
 		klog.Fatalf("failed to wait for all data stores to sync: %v", err)
 	}
@@ -267,33 +270,33 @@ func (s *KubeFedStatusController) reconcile(qualifiedName util.QualifiedName) ut
 
 	fedObject, err := s.objFromCache(s.federatedStore, federatedKind, key)
 	if err != nil {
-		return util.StatusError
+		return utils.StatusError
 	}
 
 	if fedObject == nil || fedObject.GetDeletionTimestamp() != nil {
 		klog.V(4).Infof("No federated type for %v %v found", federatedKind, key)
 		// Status object is removed by GC. So we don't have to do anything more here.
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	}
 
 	clusterNames, err := s.clusterNames()
 	if err != nil {
 		runtime.HandleError(errors.Wrap(err, "Failed to get cluster list"))
-		return util.StatusNotSynced
+		return utils.StatusNotSynced
 	}
 
 	clusterStatus, err := s.clusterStatuses(clusterNames, key)
 	if err != nil {
-		return util.StatusError
+		return utils.StatusError
 	}
 
 	existingStatus, err := s.objFromCache(s.statusStore, statusKind, key)
 	if err != nil {
-		return util.StatusError
+		return utils.StatusError
 	}
 
 	resourceGroupVersion := schema.GroupVersion{Group: s.typeConfig.GetStatusType().Group, Version: s.typeConfig.GetStatusType().Version}
-	federatedResource := util.FederatedResource{
+	federatedResource := utils.FederatedResource{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       s.typeConfig.GetStatusType().Kind,
 			APIVersion: resourceGroupVersion.String(),
@@ -313,31 +316,31 @@ func (s *KubeFedStatusController) reconcile(qualifiedName util.QualifiedName) ut
 		},
 		ClusterStatus: clusterStatus,
 	}
-	status, err := util.GetUnstructured(federatedResource)
+	status, err := utils.GetUnstructured(federatedResource)
 	if err != nil {
 		klog.Errorf("Failed to convert to Unstructured: %s %q: %v", statusKind, key, err)
-		return util.StatusError
+		return utils.StatusError
 	}
 
 	if existingStatus == nil {
 		_, err = s.statusClient.Resources(qualifiedName.Namespace).Create(context.Background(), status, metav1.CreateOptions{})
 		if err != nil {
 			runtime.HandleError(errors.Wrapf(err, "Failed to create status object for federated type %s %q", statusKind, key))
-			return util.StatusNeedsRecheck
+			return utils.StatusNeedsRecheck
 		}
 	} else if !reflect.DeepEqual(existingStatus.Object["clusterStatus"], status.Object["clusterStatus"]) {
 		if status.Object["clusterStatus"] == nil {
-			status.Object["clusterStatus"] = make([]util.ResourceClusterStatus, 0)
+			status.Object["clusterStatus"] = make([]utils.ResourceClusterStatus, 0)
 		}
 		existingStatus.Object["clusterStatus"] = status.Object["clusterStatus"]
 		_, err = s.statusClient.Resources(qualifiedName.Namespace).Update(context.Background(), existingStatus, metav1.UpdateOptions{})
 		if err != nil {
 			runtime.HandleError(errors.Wrapf(err, "Failed to update status object for federated type %s %q", statusKind, key))
-			return util.StatusNeedsRecheck
+			return utils.StatusNeedsRecheck
 		}
 	}
 
-	return util.StatusAllOK
+	return utils.StatusAllOK
 }
 
 func (s *KubeFedStatusController) rawObjFromCache(store cache.Store, kind, key string) (runtimeclient.Object, error) {
@@ -369,7 +372,7 @@ func (s *KubeFedStatusController) clusterNames() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	clusterNames := []string{}
+	var clusterNames []string
 	for _, cluster := range clusters {
 		clusterNames = append(clusterNames, cluster.Name)
 	}
@@ -378,8 +381,8 @@ func (s *KubeFedStatusController) clusterNames() ([]string, error) {
 }
 
 // clusterStatuses returns the resource status in member cluster.
-func (s *KubeFedStatusController) clusterStatuses(clusterNames []string, key string) ([]util.ResourceClusterStatus, error) {
-	clusterStatus := []util.ResourceClusterStatus{}
+func (s *KubeFedStatusController) clusterStatuses(clusterNames []string, key string) ([]utils.ResourceClusterStatus, error) {
+	var clusterStatus []utils.ResourceClusterStatus
 
 	targetKind := s.typeConfig.GetTargetType().Kind
 	for _, clusterName := range clusterNames {
@@ -401,7 +404,7 @@ func (s *KubeFedStatusController) clusterStatuses(clusterNames []string, key str
 				runtime.HandleError(wrappedErr)
 			}
 		}
-		resourceClusterStatus := util.ResourceClusterStatus{ClusterName: clusterName, Status: status}
+		resourceClusterStatus := utils.ResourceClusterStatus{ClusterName: clusterName, Status: status}
 		clusterStatus = append(clusterStatus, resourceClusterStatus)
 	}
 

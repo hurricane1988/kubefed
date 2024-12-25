@@ -21,7 +21,7 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	fedv1a1 "sigs.k8s.io/kubefed/pkg/apis/core/v1alpha1"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 type namespacedVersionAdapter struct{}
@@ -38,7 +38,7 @@ func (*namespacedVersionAdapter) NewObject() runtimeclient.Object {
 	return &fedv1a1.PropagatedVersion{}
 }
 
-func (*namespacedVersionAdapter) NewVersion(qualifiedName util.QualifiedName, ownerReference metav1.OwnerReference, status *fedv1a1.PropagatedVersionStatus) runtimeclient.Object {
+func (*namespacedVersionAdapter) NewVersion(qualifiedName utils.QualifiedName, ownerReference metav1.OwnerReference, status *fedv1a1.PropagatedVersionStatus) runtimeclient.Object {
 	return &fedv1a1.PropagatedVersion{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       qualifiedName.Namespace,

@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 type Scheduler interface {
@@ -31,7 +31,7 @@ type Scheduler interface {
 	Start()
 	HasSynced() bool
 	Stop()
-	Reconcile(obj runtimeclient.Object, qualifiedName util.QualifiedName) util.ReconciliationStatus
+	Reconcile(obj runtimeclient.Object, qualifiedName utils.QualifiedName) utils.ReconciliationStatus
 
 	StartPlugin(typeConfig typeconfig.Interface, nsAPIResource *metav1.APIResource) error
 	StopPlugin(kind string)
@@ -40,7 +40,7 @@ type Scheduler interface {
 type SchedulerEventHandlers struct {
 	KubeFedEventHandler      func(runtimeclient.Object)
 	ClusterEventHandler      func(runtimeclient.Object)
-	ClusterLifecycleHandlers *util.ClusterLifecycleHandlerFuncs
+	ClusterLifecycleHandlers *utils.ClusterLifecycleHandlerFuncs
 }
 
-type SchedulerFactory func(controllerConfig *util.ControllerConfig, eventHandlers SchedulerEventHandlers) (Scheduler, error)
+type SchedulerFactory func(controllerConfig *utils.ControllerConfig, eventHandlers SchedulerEventHandlers) (Scheduler, error)

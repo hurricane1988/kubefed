@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import (
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/options"
 )
 
-// EnableTypeDirectiveSpec defines the desired state of EnableTypeDirective.
-type EnableTypeDirectiveSpec struct {
+// TypeDirectiveSpec defines the desired state of EnableTypeDirective.
+type TypeDirectiveSpec struct {
 	// The API version of the target type.
 	// +optional
 	TargetVersion string `json:"targetVersion,omitempty"`
@@ -37,23 +37,22 @@ type EnableTypeDirectiveSpec struct {
 	FederatedVersion string `json:"federatedVersion,omitempty"`
 }
 
-// TODO(marun) This should become a proper API type and drive enabling
-// type federation via a controller.  For now its only purpose is to
+// TypeDirective type federation via a controller.  For now its only purpose is to
 // enable loading of configuration from disk.
-type EnableTypeDirective struct {
+type TypeDirective struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec EnableTypeDirectiveSpec `json:"spec,omitempty"`
+	Spec TypeDirectiveSpec `json:"spec,omitempty"`
 }
 
-func (ft *EnableTypeDirective) SetDefaults() {
+func (ft *TypeDirective) SetDefaults() {
 	ft.Spec.FederatedGroup = options.DefaultFederatedGroup
 	ft.Spec.FederatedVersion = options.DefaultFederatedVersion
 }
 
-func NewEnableTypeDirective() *EnableTypeDirective {
-	ft := &EnableTypeDirective{}
+func NewEnableTypeDirective() *TypeDirective {
+	ft := &TypeDirective{}
 	ft.SetDefaults()
 	return ft
 }

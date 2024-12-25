@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 
 	"sigs.k8s.io/kubefed/pkg/apis/core/common"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 func TestThresholdCheckedClusterStatus(t *testing.T) {
@@ -37,7 +37,7 @@ func TestThresholdCheckedClusterStatus(t *testing.T) {
 	t4 := metav1.Time{Time: epoch.Add(4 * time.Second)}
 	t5 := metav1.Time{Time: epoch.Add(5 * time.Second)}
 
-	config := &util.ClusterHealthCheckConfig{
+	config := &utils.ClusterHealthCheckConfig{
 		Period:           10 * time.Second,
 		FailureThreshold: 3,
 		SuccessThreshold: 1,

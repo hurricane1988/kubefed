@@ -33,7 +33,7 @@ GITHUB_REPO="${GITHUB_REPO:-kubernetes-sigs/kubefed}"
 GITHUB_REMOTE_UPSTREAM_NAME="${GITHUB_REMOTE_UPSTREAM_NAME:-upstream}"
 
 function verify-command-installed() {
-  if ! util::command-installed gh; then
+  if ! utils::command-installed gh; then
     echo "gh command not found. Please add gh to your PATH and try again." >&2
     return 1
   fi
@@ -85,8 +85,8 @@ function build-completed() {
 }
 
 function verify-continuous-integration() {
-  util::wait-for-condition "kubefed CI build to start" "build-started" 1200
-  util::wait-for-condition "kubefed CI build to complete" "build-completed" 3600
+  utils::wait-for-condition "kubefed CI build to start" "build-started" 1200
+  utils::wait-for-condition "kubefed CI build to complete" "build-completed" 3600
 
   local buildConclusion="$(build-conclusion)"
 
@@ -104,7 +104,7 @@ function quay-image-status() {
 }
 
 function verify-container-image() {
-  util::wait-for-condition "kubefed container image in quay" "quay-image-status" 60
+  utils::wait-for-condition "kubefed container image in quay" "quay-image-status" 60
 }
 
 function update-changelog() {
@@ -120,22 +120,22 @@ if [[ ! "${RELEASE_TAG}" =~ ${RELEASE_TAG_REGEX} ]]; then
   exit 1
 fi
 
-util::log "Verifying gh CLI command installed"
+utils::log "Verifying gh CLI command installed"
 verify-command-installed
 
-util::log "Building release artifacts first to make sure build succeeds"
+utils::log "Building release artifacts first to make sure build succeeds"
 build-release-artifacts
 
-util::log "Creating local git signed and annotated tag and pushing tag to kick off build process"
+utils::log "Creating local git signed and annotated tag and pushing tag to kick off build process"
 create-and-push-tag
 
-util::log "Verifying image builds and completes successfully in Github Actions. This can take a while (~1 hour)"
+utils::log "Verifying image builds and completes successfully in Github Actions. This can take a while (~1 hour)"
 verify-continuous-integration
 
-util::log "Verifying container image tags and pushes successfully to Quay"
+utils::log "Verifying container image tags and pushes successfully to Quay"
 verify-container-image
 
-util::log "Updating CHANGELOG.md"
+utils::log "Updating CHANGELOG.md"
 update-changelog
 
 # TODO(font): Consider making the next step to create a github release

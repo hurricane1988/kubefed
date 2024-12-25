@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl"
 	kfenable "sigs.k8s.io/kubefed/pkg/kubefedctl/enable"
 	kfenableopts "sigs.k8s.io/kubefed/pkg/kubefedctl/options"
@@ -137,11 +137,11 @@ var _ = Describe("FTC controller", func() {
 func enableResource(f framework.KubeFedFramework, targetAPIResource *metav1.APIResource, version string, needCleanup bool) typeconfig.Interface {
 	tl := f.Logger()
 
-	enableTypeDirective := &kfenable.EnableTypeDirective{
+	enableTypeDirective := &kfenable.TypeDirective{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: targetAPIResource.Name,
 		},
-		Spec: kfenable.EnableTypeDirectiveSpec{
+		Spec: kfenable.TypeDirectiveSpec{
 			TargetVersion:    version,
 			FederatedGroup:   targetAPIResource.Group,
 			FederatedVersion: targetAPIResource.Version,
@@ -168,7 +168,7 @@ func enableResource(f framework.KubeFedFramework, targetAPIResource *metav1.APIR
 		dryRun := false
 
 		objectMeta := typeConfig.GetObjectMeta()
-		qualifiedName := util.QualifiedName{Namespace: f.KubeFedSystemNamespace(), Name: objectMeta.Name}
+		qualifiedName := utils.QualifiedName{Namespace: f.KubeFedSystemNamespace(), Name: objectMeta.Name}
 		err := kubefedctl.DisableFederation(nil, f.KubeConfig(), enableTypeDirective, qualifiedName, delete, dryRun, false)
 		if err != nil {
 			tl.Fatalf("Error disabling federation of target type %q: %v", targetAPIResource.Kind, err)
@@ -196,7 +196,7 @@ func waitForGenerationSynced(tl common.TestLogger, client genericclient.Client, 
 		ftc := fedv1b1.FederatedTypeConfig{}
 		err := client.Get(context.TODO(), &ftc, namespace, name)
 		if err != nil {
-			tl.Fatalf("Error retrieving status of FederatedTypeConfig %q: %v", util.QualifiedName{Namespace: namespace, Name: name}, err)
+			tl.Fatalf("Error retrieving status of FederatedTypeConfig %q: %v", utils.QualifiedName{Namespace: namespace, Name: name}, err)
 		}
 
 		if ftc.Generation != ftc.Status.ObservedGeneration {

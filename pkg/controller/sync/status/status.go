@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/klog/v2"
 
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 type PropagationStatus string
@@ -126,7 +126,7 @@ type CollectedResourceStatus struct {
 func SetFederatedStatus(fedObject *unstructured.Unstructured, reason AggregateReason, collectedStatus CollectedPropagationStatus, collectedResourceStatus CollectedResourceStatus, resourceStatusCollection bool) (bool, error) {
 	resource := &GenericFederatedResource{}
 
-	err := util.UnstructuredToInterface(fedObject, resource)
+	err := utils.UnstructuredToInterface(fedObject, resource)
 	if err != nil {
 		return false, errors.Wrapf(err, "Failed to unmarshall to generic resource")
 	}
@@ -159,7 +159,7 @@ func SetFederatedStatus(fedObject *unstructured.Unstructured, reason AggregateRe
 	}
 
 	klog.V(4).Infof("Setting the status of federated object '%v' and resource object '%v'", fedObject.GetName(), resourceObj.GetName())
-	fedObject.Object[util.StatusField] = resourceObj.Object[util.StatusField]
+	fedObject.Object[utils.StatusField] = resourceObj.Object[utils.StatusField]
 
 	return true, nil
 }

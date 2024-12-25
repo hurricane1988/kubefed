@@ -20,7 +20,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# shellcheck source=util.sh
+# shellcheck source=utils.sh
 source "${BASH_SOURCE%/*}/util.sh"
 ROOT_DIR="$(cd "${BASH_SOURCE%/*}/.." ; pwd)"
 TEMP_DIR="$(mktemp -d)"

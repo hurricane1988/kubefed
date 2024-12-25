@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,27 +23,12 @@ import (
 )
 
 const (
-	// Every feature gate should add method here following this template:
-	//
-	// // owner: @username
-	// // alpha: v1.X
-	// MyFeature featuregate.Feature = "MyFeature"
-
-	// owner: @marun
-	// alpha: v0.1
-	//
 	// PushReconciler ensures that managed resources in member clusters represent the state declared in federated resources.
 	PushReconciler featuregate.Feature = "PushReconciler"
 
-	// owner: @irfanurrehman
-	// alpha: v0.1
-	//
-	// Scheduler controllers which dynamically schedules workloads based on user preferences.
+	// SchedulerPreferences Scheduler controllers which dynamically schedules workloads based on user preferences.
 	SchedulerPreferences featuregate.Feature = "SchedulerPreferences"
 
-	// owner: @hectorj2f
-	// beta: v0.5
-	//
 	// RawResourceStatusCollection enables the collection of the status of target types when enabled
 	RawResourceStatusCollection featuregate.Feature = "RawResourceStatusCollection"
 )

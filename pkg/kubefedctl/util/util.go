@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ func (a *fedConfig) ClusterConfig(context, kubeconfigPath string) (*rest.Config,
 	return clusterClientConfig, nil
 }
 
-// getClientConfig is a helper method to create a client config from the
+// GetClientConfig is a helper method to create a client config from the
 // context and kubeconfig passed as arguments.
 func (a *fedConfig) GetClientConfig(context, kubeconfigPath string) clientcmd.ClientConfig {
 	loadingRules := *a.pathOptions.LoadingRules

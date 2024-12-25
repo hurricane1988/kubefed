@@ -24,7 +24,7 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 type TestContextType struct {
@@ -63,8 +63,8 @@ func registerFlags(t *TestContextType) {
 		"Path to kubeconfig containing embedded authinfo.")
 	flag.StringVar(&t.KubeContext, "context", "",
 		"kubeconfig context to use/override. If unset, will use value from 'current-context'.")
-	flag.StringVar(&t.KubeFedSystemNamespace, "kubefed-namespace", util.DefaultKubeFedSystemNamespace,
-		fmt.Sprintf("The namespace the KubeFed control plane is deployed in.  If unset, will default to %q.", util.DefaultKubeFedSystemNamespace))
+	flag.StringVar(&t.KubeFedSystemNamespace, "kubefed-namespace", utils.DefaultKubeFedSystemNamespace,
+		fmt.Sprintf("The namespace the KubeFed control plane is deployed in.  If unset, will default to %q.", utils.DefaultKubeFedSystemNamespace))
 	flag.DurationVar(&t.SingleCallTimeout, "single-call-timeout", DefaultSingleCallTimeout,
 		fmt.Sprintf("The maximum duration of a single call.  If unset, will default to %v", DefaultSingleCallTimeout))
 	flag.BoolVar(&t.LimitedScope, "limited-scope", false, "Whether the KubeFed namespace (configurable via --kubefed-namespace) will be the only target for the control plane.")

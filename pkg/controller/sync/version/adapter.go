@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,25 +21,25 @@ import (
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	fedv1a1 "sigs.k8s.io/kubefed/pkg/apis/core/v1alpha1"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
-type VersionAdapter interface {
+type Adapter interface {
 	TypeName() string
 
-	// Create an empty instance of the version type
+	// NewObject Create an empty instance of the version type
 	NewObject() runtimeclient.Object
-	// Create an empty instance of list version type
+	// NewListObject Create an empty instance of list version type
 	NewListObject() runtimeclient.ObjectList
-	// Create a populated instance of the version type
-	NewVersion(qualifiedName util.QualifiedName, ownerReference metav1.OwnerReference, status *fedv1a1.PropagatedVersionStatus) runtimeclient.Object
+	// NewVersion Create a populated instance of the version type
+	NewVersion(qualifiedName utils.QualifiedName, ownerReference metav1.OwnerReference, status *fedv1a1.PropagatedVersionStatus) runtimeclient.Object
 
-	// Type-agnostic access / mutation of the Status field of a version resource
+	// GetStatus Type-agnostic access / mutation of the Status field of a version resource
 	GetStatus(obj runtimeclient.Object) *fedv1a1.PropagatedVersionStatus
 	SetStatus(obj runtimeclient.Object, status *fedv1a1.PropagatedVersionStatus)
 }
 
-func NewVersionAdapter(namespaced bool) VersionAdapter {
+func NewVersionAdapter(namespaced bool) Adapter {
 	if namespaced {
 		return &namespacedVersionAdapter{}
 	}

@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/test/common"
 
 	. "github.com/onsi/ginkgo" //nolint:stylecheck
@@ -46,7 +46,7 @@ type KubeFedFrameworkImpl interface {
 	BeforeEach()
 	AfterEach()
 
-	ControllerConfig() *util.ControllerConfig
+	ControllerConfig() *utils.ControllerConfig
 
 	Logger() common.TestLogger
 
@@ -146,7 +146,7 @@ func (f *frameworkWrapper) AfterEach() {
 	}
 }
 
-func (f *frameworkWrapper) ControllerConfig() *util.ControllerConfig {
+func (f *frameworkWrapper) ControllerConfig() *utils.ControllerConfig {
 	return f.framework().ControllerConfig()
 }
 
@@ -262,11 +262,11 @@ func (f *frameworkWrapper) EnsureTestFederatedNamespace(allClusters bool) *unstr
 	spec := map[string]interface{}{}
 	if allClusters {
 		// An empty cluster selector field selects all clusters
-		spec[util.PlacementField] = map[string]interface{}{
-			util.ClusterSelectorField: map[string]interface{}{},
+		spec[utils.PlacementField] = map[string]interface{}{
+			utils.ClusterSelectorField: map[string]interface{}{},
 		}
 	}
-	obj.Object[util.SpecField] = spec
+	obj.Object[utils.SpecField] = spec
 
 	err = client.Create(context.Background(), obj)
 	if err != nil {
@@ -285,9 +285,9 @@ func (f *frameworkWrapper) namespaceTypeConfigOrDie() typeconfig.Interface {
 			tl.Fatalf("Error initializing dynamic client: %v", err)
 		}
 		typeConfig := &fedv1b1.FederatedTypeConfig{}
-		err = client.Get(context.Background(), typeConfig, f.KubeFedSystemNamespace(), util.NamespaceName)
+		err = client.Get(context.Background(), typeConfig, f.KubeFedSystemNamespace(), utils.NamespaceName)
 		if err != nil {
-			tl.Fatalf("Error retrieving federatedtypeconfig for %q: %v", util.NamespaceName, err)
+			tl.Fatalf("Error retrieving federatedtypeconfig for %q: %v", utils.NamespaceName, err)
 		}
 		f.namespaceTypeConfig = typeConfig
 	}

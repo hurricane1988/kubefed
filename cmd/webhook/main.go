@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,6 +35,6 @@ func main() {
 
 	if err := app.NewWebhookCommand(signals.SetupSignalHandler().Done()).Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1) //nolint:gocritic
+		os.Exit(1)
 	}
 }

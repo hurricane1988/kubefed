@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
-	ctlutil "sigs.k8s.io/kubefed/pkg/controller/util"
+	ctlutil "sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/enable"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/util"
 )
@@ -225,7 +225,7 @@ func getResourcesInNamespace(config *rest.Config, namespace string, skipAPIResou
 	return resourcesInNamespace, nil
 }
 
-// decodeUnstructuredFromFile reads a list of yamls into a slice of unstructured objects
+// DecodeUnstructuredFromFile  reads a list of yamls into a slice of unstructured objects
 func DecodeUnstructuredFromFile(filename string) ([]*unstructured.Unstructured, error) {
 	var f *os.File
 	if filename == "-" {
@@ -243,7 +243,7 @@ func DecodeUnstructuredFromFile(filename string) ([]*unstructured.Unstructured, 
 	var unstructuredList []*unstructured.Unstructured
 	reader := utilyaml.NewYAMLReader(bufio.NewReader(f))
 	for {
-		unstructuedObj := &unstructured.Unstructured{}
+		unstructuredObj := &unstructured.Unstructured{}
 		// Read one YAML document at a time, until io.EOF is returned
 		buf, err := reader.Read()
 		if err == io.EOF {
@@ -254,11 +254,11 @@ func DecodeUnstructuredFromFile(filename string) ([]*unstructured.Unstructured, 
 		if len(buf) == 0 {
 			break
 		}
-		if err := yaml.Unmarshal(buf, unstructuedObj); err != nil {
+		if err = yaml.Unmarshal(buf, unstructuredObj); err != nil {
 			return nil, err
 		}
 
-		unstructuredList = append(unstructuredList, unstructuedObj)
+		unstructuredList = append(unstructuredList, unstructuredObj)
 	}
 
 	return unstructuredList, nil

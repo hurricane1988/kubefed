@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/features"
 	"sigs.k8s.io/kubefed/test/common"
 
@@ -81,8 +81,8 @@ func SetUpControlPlane() {
 	config, _, err := loadConfig(TestContext.KubeConfig, TestContext.KubeContext)
 	Expect(err).NotTo(HaveOccurred())
 
-	clusterControllerFixture = NewClusterControllerFixture(NewE2ELogger(), &util.ControllerConfig{
-		KubeFedNamespaces: util.KubeFedNamespaces{
+	clusterControllerFixture = NewClusterControllerFixture(NewE2ELogger(), &utils.ControllerConfig{
+		KubeFedNamespaces: utils.KubeFedNamespaces{
 			KubeFedNamespace: TestContext.KubeFedSystemNamespace,
 		},
 		KubeConfig:                  config,
@@ -182,9 +182,9 @@ func (f *UnmanagedFramework) AfterEach() {
 	}
 }
 
-func (f *UnmanagedFramework) ControllerConfig() *util.ControllerConfig {
-	controllerCfg := &util.ControllerConfig{
-		KubeFedNamespaces: util.KubeFedNamespaces{
+func (f *UnmanagedFramework) ControllerConfig() *utils.ControllerConfig {
+	controllerCfg := &utils.ControllerConfig{
+		KubeFedNamespaces: utils.KubeFedNamespaces{
 			KubeFedNamespace: TestContext.KubeFedSystemNamespace,
 			TargetNamespace:  f.inMemoryTargetNamespace(),
 		},
@@ -229,7 +229,7 @@ func (f *UnmanagedFramework) ClusterNames(userAgent string) []string {
 func (f *UnmanagedFramework) ClusterDynamicClients(apiResource *metav1.APIResource, userAgent string) map[string]common.TestCluster {
 	testClusters := make(map[string]common.TestCluster)
 	for clusterName, clusterConfig := range f.ClusterConfigs(userAgent) {
-		client, err := util.NewResourceClient(clusterConfig.Config, apiResource)
+		client, err := utils.NewResourceClient(clusterConfig.Config, apiResource)
 		if err != nil {
 			Failf("Error creating a resource client in cluster %q for kind %q: %v", clusterName, apiResource.Kind, err)
 		}
@@ -271,7 +271,7 @@ func (f *UnmanagedFramework) ClusterConfigs(userAgent string) map[string]common.
 
 	clusterConfigs := make(map[string]common.TestClusterConfig)
 	for _, cluster := range clusterList.Items {
-		config, err := util.BuildClusterConfig(&cluster, client, TestContext.KubeFedSystemNamespace)
+		config, err := utils.BuildClusterConfig(&cluster, client, TestContext.KubeFedSystemNamespace)
 		Expect(err).NotTo(HaveOccurred())
 		restclient.AddUserAgent(config, userAgent)
 		clusterConfigs[cluster.Name] = common.TestClusterConfig{
@@ -316,16 +316,16 @@ func (f *UnmanagedFramework) inMemoryTargetNamespace() string {
 }
 
 func (f *UnmanagedFramework) setUpSyncControllerFixture(typeConfig typeconfig.Interface, namespacePlacement *metav1.APIResource) TestFixture {
-	// Hybrid setup where just the sync controller is run and we do not rely on
+	// Hybrid setup where just the sync controller is run, and we do not rely on
 	// the already deployed (unmanaged) controller manager. Only do this if
 	// in-memory-controllers is true.
 	if TestContext.InMemoryControllers {
 		controllerConfig := f.ControllerConfig()
 		// Namespaces are cluster scoped so all namespaces must be targeted
-		if typeConfig.GetTargetType().Kind == util.NamespaceKind {
+		if typeConfig.GetTargetType().Kind == utils.NamespaceKind {
 			controllerConfig.TargetNamespace = metav1.NamespaceAll
 		}
-		return NewSyncControllerFixture(f.logger, controllerConfig, typeConfig, namespacePlacement)
+		return NewSyncControllerFixture(context.Background(), false, f.logger, controllerConfig, typeConfig, namespacePlacement)
 	}
 	return nil
 }

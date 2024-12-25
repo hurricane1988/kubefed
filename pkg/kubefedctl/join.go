@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import (
 
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	ctlutil "sigs.k8s.io/kubefed/pkg/controller/util"
+	ctlutil "sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/options"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/util"
 	"sigs.k8s.io/kubefed/pkg/metrics"
@@ -943,8 +943,8 @@ func populateSecretInHostCluster(clusterClientset, hostClientset kubeclient.Inte
 	// found in the secret.
 	caBundle := secret.Data[ctlutil.CaCrtKey]
 
-	//--error-on-existing is set to true and the secret exists, return an error.
-	//--error-on-existing is set to false and the secret exists, just update it.
+	// --error-on-existing is set to true and the secret exists, return an error.
+	// --error-on-existing is set to false and the secret exists, just update it.
 	if secretName != "" {
 		getHostSecret, err := hostClientset.CoreV1().Secrets(hostNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
 		switch {

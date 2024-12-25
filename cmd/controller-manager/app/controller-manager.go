@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/controller/federatedtypeconfig"
 	"sigs.k8s.io/kubefed/pkg/controller/kubefedcluster"
 	"sigs.k8s.io/kubefed/pkg/controller/schedulingmanager"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/features"
 	kubefedmetrics "sigs.k8s.io/kubefed/pkg/metrics"
 	"sigs.k8s.io/kubefed/pkg/version"
@@ -220,9 +220,9 @@ func getKubeFedConfig(opts *options.Options) *corev1b1.KubeFedConfig {
 		// there is no --kubefed-config specified, get `kubefed` KubeFedConfig from the cluster
 		client := genericclient.NewForConfigOrDieWithUserAgent(opts.Config.KubeConfig, "kubefedconfig")
 
-		name := util.KubeFedConfigName
+		name := utils.KubeFedConfigName
 		namespace := opts.Config.KubeFedNamespace
-		qualifiedName := util.QualifiedName{
+		qualifiedName := utils.QualifiedName{
 			Namespace: namespace,
 			Name:      name,
 		}
@@ -259,7 +259,6 @@ func getKubeFedConfig(opts *options.Options) *corev1b1.KubeFedConfig {
 }
 
 func setDefaultKubeFedConfigScope(fedConfig *corev1b1.KubeFedConfig) bool {
-	// TODO(sohankunkerkar) Remove when no longer necessary.
 	// This Environment variable is a temporary addition to support Red Hat's downstream testing efforts.
 	// Its continued existence should not be relied upon.
 	const defaultScopeEnv = "DEFAULT_KUBEFED_SCOPE"
@@ -292,7 +291,7 @@ func setDefaultKubeFedConfigScope(fedConfig *corev1b1.KubeFedConfig) bool {
 func createKubeFedConfig(config *rest.Config, fedConfig *corev1b1.KubeFedConfig) {
 	name := fedConfig.Name
 	namespace := fedConfig.Namespace
-	qualifiedName := util.QualifiedName{
+	qualifiedName := utils.QualifiedName{
 		Namespace: namespace,
 		Name:      name,
 	}
@@ -310,7 +309,7 @@ func createKubeFedConfig(config *rest.Config, fedConfig *corev1b1.KubeFedConfig)
 func deleteKubeFedConfig(config *rest.Config, fedConfig *corev1b1.KubeFedConfig) {
 	name := fedConfig.Name
 	namespace := fedConfig.Namespace
-	qualifiedName := util.QualifiedName{
+	qualifiedName := utils.QualifiedName{
 		Namespace: namespace,
 		Name:      name,
 	}
@@ -327,9 +326,9 @@ func setOptionsByKubeFedConfig(opts *options.Options) {
 	fedConfig := getKubeFedConfig(opts)
 	if fedConfig == nil {
 		// KubeFedConfig could not be sourced from --kubefed-config or from the API.
-		qualifiedName := util.QualifiedName{
+		qualifiedName := utils.QualifiedName{
 			Namespace: opts.Config.KubeFedNamespace,
-			Name:      util.KubeFedConfigName,
+			Name:      utils.KubeFedConfigName,
 		}
 
 		klog.Infof("Creating KubeFedConfig %q with default values", qualifiedName)
@@ -351,7 +350,7 @@ func setOptionsByKubeFedConfig(opts *options.Options) {
 		}
 	}
 
-	qualifedName := util.QualifiedName{
+	qualifedName := utils.QualifiedName{
 		Name:      fedConfig.Name,
 		Namespace: fedConfig.Namespace,
 	}

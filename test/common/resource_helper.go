@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	restclient "k8s.io/client-go/rest"
 
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 func CreateResource(kubeconfig *restclient.Config, apiResource metav1.APIResource, desiredObj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -37,7 +37,7 @@ func CreateResource(kubeconfig *restclient.Config, apiResource metav1.APIResourc
 		resourceMsg = fmt.Sprintf("%s in namespace %q", resourceMsg, namespace)
 	}
 
-	client, err := util.NewResourceClient(kubeconfig, &apiResource)
+	client, err := utils.NewResourceClient(kubeconfig, &apiResource)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error creating resource client")
 	}

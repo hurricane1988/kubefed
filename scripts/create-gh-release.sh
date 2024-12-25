@@ -30,7 +30,7 @@ GITHUB_REMOTE_UPSTREAM_NAME="${GITHUB_REMOTE_UPSTREAM_NAME:-upstream}"
 GITHUB_PR_BASE_BRANCH="${GITHUB_PR_BASE_BRANCH:-master}"
 
 function verify-command-installed() {
-  if ! util::command-installed gh; then
+  if ! utils::command-installed gh; then
     echo "gh command not found. Please add gh to your PATH and try again." >&2
     return 1
   fi
@@ -105,19 +105,19 @@ if [[ ! "${RELEASE_TAG}" =~ ${RELEASE_TAG_REGEX} ]]; then
   exit 1
 fi
 
-util::log "Verifying gh CLI command installed"
+utils::log "Verifying gh CLI command installed"
 verify-command-installed
 
-util::log "Priming gh CLI command for authentication"
+utils::log "Priming gh CLI command for authentication"
 prime-command-for-auth
 
-util::log "Verifying release assets file exists"
+utils::log "Verifying release assets file exists"
 verify-assets-file-exists
 
-util::log "Creating pull request with release ${RELEASE_TAG} changes"
+utils::log "Creating pull request with release ${RELEASE_TAG} changes"
 create-release-pr
 
-util::log "Creating github release"
+utils::log "Creating github release"
 create-github-release
 
 echo -e "\nCreated kubefed ${RELEASE_TAG} pull request and github draft release. Go merge and publish at the following URLs when ready:"

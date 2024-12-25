@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ func TestFederateResources(t *testing.T) {
 	})
 
 	t.Run("TestNonNameSpacedDeployment", func(t *testing.T) {
-		federatedResources, err := federate.FederateResources([]*unstructured.Unstructured{resource})
+		federatedResources, err := federate.Resources([]*unstructured.Unstructured{resource})
 		assert.NoError(t, err, "Should not expect any errorr")
 		assert.Len(t, federatedResources, 1, "Should return a federated resource")
 
@@ -67,7 +67,7 @@ func TestFederateResources(t *testing.T) {
 	t.Run("TestNameSpacedDeployment", func(t *testing.T) {
 		testNS := "testNS"
 		resource.SetNamespace(testNS)
-		federatedResources, err := federate.FederateResources([]*unstructured.Unstructured{resource})
+		federatedResources, err := federate.Resources([]*unstructured.Unstructured{resource})
 		assert.NoError(t, err, "Should not expect any errorr")
 		assert.Len(t, federatedResources, 1, "Should return a federated resource")
 

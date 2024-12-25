@@ -19,21 +19,20 @@ package e2e
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 
 	"sigs.k8s.io/kubefed/test/common"
 	"sigs.k8s.io/kubefed/test/e2e/framework"
 
-	. "github.com/onsi/ginkgo" //nolint:stylecheck
+	"github.com/onsi/ginkgo"
 )
 
-var _ = Describe("Leader Elector", func() {
+var _ = ginkgo.Describe("Leader Elector", func() {
 	f := framework.NewKubeFedFramework("leaderelection")
 	tl := framework.NewE2ELogger()
 
-	It("should chose secondary instance, primary goes down", func() {
+	ginkgo.It("should chose secondary instance, primary goes down", func() {
 		if framework.TestContext.LimitedScope {
 			framework.Skipf("Testing of leader election requires an isolated test namespace which is only possible with a cluster-scoped control plane")
 		}
@@ -77,7 +76,7 @@ var _ = Describe("Leader Elector", func() {
 
 func spawnControllerManagerProcess(tl common.TestLogger, kubeConfigPath, namespace string) (*exec.Cmd, io.ReadCloser, error) {
 	kubeFedConfigAsset := common.MustAsset("config/kubefedconfig.yaml")
-	tmpFile, err := ioutil.TempFile("", "leaderelectionconfig.yaml")
+	tmpFile, err := os.CreateTemp("", "leaderelectionconfig.yaml")
 	if err != nil {
 		tl.Fatalf("Error creating the temp file for KubeFedConfig resource: %v", err)
 	}

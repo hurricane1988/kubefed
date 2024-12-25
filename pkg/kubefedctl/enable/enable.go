@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	ctlutil "sigs.k8s.io/kubefed/pkg/controller/util"
+	ctlutil "sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/options"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/util"
 )
@@ -79,7 +79,7 @@ type enableTypeOptions struct {
 	output              string
 	outputYAML          bool
 	filename            string
-	enableTypeDirective *EnableTypeDirective
+	enableTypeDirective *TypeDirective
 }
 
 // Bind adds the join specific arguments to the flagset passed in as an
@@ -190,7 +190,7 @@ type typeResources struct {
 	CRD        *apiextv1.CustomResourceDefinition
 }
 
-func GetResources(config *rest.Config, enableTypeDirective *EnableTypeDirective) (*typeResources, error) {
+func GetResources(config *rest.Config, enableTypeDirective *TypeDirective) (*typeResources, error) {
 	apiResource, err := LookupAPIResource(config, enableTypeDirective.Name, enableTypeDirective.Spec.TargetVersion)
 	if err != nil {
 		return nil, err
@@ -217,8 +217,7 @@ func GetResources(config *rest.Config, enableTypeDirective *EnableTypeDirective)
 	}, nil
 }
 
-// TODO(marun) Allow updates to the configuration for a type that has
-// already been enabled for kubefed.  This would likely involve
+// CreateResources already been enabled for kubefed.  This would likely involve
 // updating the version of the target type and the validation of the schema.
 func CreateResources(cmdOut io.Writer, config *rest.Config, resources *typeResources, namespace string, dryRun bool) error {
 	write := func(data string) {
@@ -229,11 +228,11 @@ func CreateResources(cmdOut io.Writer, config *rest.Config, resources *typeResou
 		}
 	}
 
-	hostClientset, err := util.HostClientset(config)
+	hostClient, err := util.HostClientset(config)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create host clientset")
 	}
-	_, err = hostClientset.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+	_, err = hostClient.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return errors.Wrapf(err, "KubeFed system namespace %q does not exist", namespace)
 	} else if err != nil {
@@ -341,7 +340,7 @@ func CreateResources(cmdOut io.Writer, config *rest.Config, resources *typeResou
 		patch := runtimeclient.MergeFrom(existingTypeConfig.DeepCopy())
 		existingTypeConfig.Spec = concreteTypeConfig.Spec
 		if !dryRun {
-			err := client.Patch(context.TODO(), existingTypeConfig, patch)
+			err = client.Patch(context.TODO(), existingTypeConfig, patch)
 			if err != nil {
 				return errors.Wrapf(err, "Error updating FederatedTypeConfig %q", concreteTypeConfig.Name)
 			}
@@ -353,7 +352,7 @@ func CreateResources(cmdOut io.Writer, config *rest.Config, resources *typeResou
 	return nil
 }
 
-func GenerateTypeConfigForTarget(apiResource metav1.APIResource, enableTypeDirective *EnableTypeDirective) typeconfig.Interface {
+func GenerateTypeConfigForTarget(apiResource metav1.APIResource, enableTypeDirective *TypeDirective) typeconfig.Interface {
 	spec := enableTypeDirective.Spec
 	kind := apiResource.Kind
 	pluralName := apiResource.Name

@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -40,11 +40,11 @@ const (
 	resourcePluralName = "kubefedconfigs"
 )
 
-type KubeFedConfigValidator struct{}
+type Validator struct{}
 
-var _ admission.Handler = &KubeFedConfigValidator{}
+var _ admission.Handler = &Validator{}
 
-func (a *KubeFedConfigValidator) Handle(ctx context.Context, admissionSpec admission.Request) admission.Response {
+func (a *Validator) Handle(ctx context.Context, admissionSpec admission.Request) admission.Response {
 	klog.V(4).Infof("Validating %q AdmissionRequest = %s", ResourceName, webhook.AdmissionRequestDebugString(admissionSpec))
 
 	if webhook.Allowed(admissionSpec, resourcePluralName) {

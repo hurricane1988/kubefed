@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,16 +22,16 @@ import (
 
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 // Options contains everything necessary to create and run controller-manager.
 type Options struct {
-	Config                   *util.ControllerConfig
+	Config                   *utils.ControllerConfig
 	FeatureGates             map[string]bool
 	Scope                    apiextv1.ResourceScope
-	LeaderElection           *util.LeaderElectionConfiguration
-	ClusterHealthCheckConfig *util.ClusterHealthCheckConfig
+	LeaderElection           *utils.LeaderElectionConfiguration
+	ClusterHealthCheckConfig *utils.ClusterHealthCheckConfig
 }
 
 // AddFlags adds flags to fs and binds them to options.
@@ -41,9 +41,9 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 
 func NewOptions() *Options {
 	return &Options{
-		Config:                   new(util.ControllerConfig),
+		Config:                   new(utils.ControllerConfig),
 		FeatureGates:             make(map[string]bool),
-		LeaderElection:           new(util.LeaderElectionConfiguration),
-		ClusterHealthCheckConfig: new(util.ClusterHealthCheckConfig),
+		LeaderElection:           new(utils.LeaderElectionConfiguration),
+		ClusterHealthCheckConfig: new(utils.ClusterHealthCheckConfig),
 	}
 }

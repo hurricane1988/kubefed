@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 type isNamespaceInHostClusterFunc func(clusterObj runtimeclient.Object) bool
@@ -44,10 +44,10 @@ type checkUnmanagedDispatcherImpl struct {
 	dispatcher *operationDispatcherImpl
 
 	targetGVK  schema.GroupVersionKind
-	targetName util.QualifiedName
+	targetName utils.QualifiedName
 }
 
-func NewCheckUnmanagedDispatcher(clientAccessor clientAccessorFunc, targetGVK schema.GroupVersionKind, targetName util.QualifiedName) CheckUnmanagedDispatcher {
+func NewCheckUnmanagedDispatcher(clientAccessor clientAccessorFunc, targetGVK schema.GroupVersionKind, targetName utils.QualifiedName) CheckUnmanagedDispatcher {
 	dispatcher := newOperationDispatcher(clientAccessor, nil)
 	return &checkUnmanagedDispatcherImpl{
 		dispatcher: dispatcher,
@@ -67,7 +67,7 @@ func (d *checkUnmanagedDispatcherImpl) CheckRemovedOrUnlabeled(clusterName strin
 	d.dispatcher.incrementOperationsInitiated()
 	const op = "check for deletion of resource or removal of managed label from"
 	const opContinuous = "Checking for deletion of resource or removal of managed label from"
-	go d.dispatcher.clusterOperation(clusterName, op, func(client generic.Client) util.ReconciliationStatus {
+	go d.dispatcher.clusterOperation(clusterName, op, func(client generic.Client) utils.ReconciliationStatus {
 		targetName := d.targetNameForCluster(clusterName)
 
 		klog.V(2).Infof(eventTemplate, opContinuous, d.targetGVK.Kind, targetName, clusterName)
@@ -76,29 +76,29 @@ func (d *checkUnmanagedDispatcherImpl) CheckRemovedOrUnlabeled(clusterName strin
 		clusterObj.SetGroupVersionKind(d.targetGVK)
 		err := client.Get(context.Background(), clusterObj, targetName.Namespace, targetName.Name)
 		if apierrors.IsNotFound(err) {
-			return util.StatusAllOK
+			return utils.StatusAllOK
 		}
 		if err != nil {
 			wrappedErr := d.wrapOperationError(err, clusterName, op)
 			runtime.HandleError(wrappedErr)
-			return util.StatusError
+			return utils.StatusError
 		}
 		if clusterObj.GetDeletionTimestamp() != nil {
 			if isHostNamespace(clusterObj) {
-				return util.StatusAllOK
+				return utils.StatusAllOK
 			}
 			err = errors.Errorf("resource is pending deletion")
 			wrappedErr := d.wrapOperationError(err, clusterName, op)
 			runtime.HandleError(wrappedErr)
-			return util.StatusError
+			return utils.StatusError
 		}
-		if !util.HasManagedLabel(clusterObj) {
-			return util.StatusAllOK
+		if !utils.HasManagedLabel(clusterObj) {
+			return utils.StatusAllOK
 		}
 		err = errors.Errorf("resource still has the managed label")
 		wrappedErr := d.wrapOperationError(err, clusterName, op)
 		runtime.HandleError(wrappedErr)
-		return util.StatusError
+		return utils.StatusError
 	})
 }
 
@@ -106,6 +106,6 @@ func (d *checkUnmanagedDispatcherImpl) wrapOperationError(err error, clusterName
 	return wrapOperationError(err, operation, d.targetGVK.Kind, d.targetNameForCluster(clusterName).String(), clusterName)
 }
 
-func (d *checkUnmanagedDispatcherImpl) targetNameForCluster(clusterName string) util.QualifiedName {
-	return util.QualifiedNameForCluster(clusterName, d.targetName)
+func (d *checkUnmanagedDispatcherImpl) targetNameForCluster(clusterName string) utils.QualifiedName {
+	return utils.QualifiedNameForCluster(clusterName, d.targetName)
 }

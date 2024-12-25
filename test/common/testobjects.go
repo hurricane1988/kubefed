@@ -23,19 +23,19 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/federate"
 )
 
 func NewTestObject(typeConfig typeconfig.Interface, namespace string, clusterNames []string, fixture *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	obj := newTestUnstructured(typeConfig.GetFederatedType(), namespace)
 
-	template, ok, err := unstructured.NestedFieldCopy(fixture.Object, util.TemplateField)
+	template, ok, err := unstructured.NestedFieldCopy(fixture.Object, utils.TemplateField)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error retrieving template field")
 	}
 	if ok {
-		err := unstructured.SetNestedField(obj.Object, template, util.SpecField, util.TemplateField)
+		err := unstructured.SetNestedField(obj.Object, template, utils.SpecField, utils.TemplateField)
 		if err != nil {
 			return nil, err
 		}
@@ -46,13 +46,13 @@ func NewTestObject(typeConfig typeconfig.Interface, namespace string, clusterNam
 		return nil, err
 	}
 	if overrides != nil {
-		err = unstructured.SetNestedSlice(obj.Object, overrides, util.SpecField, util.OverridesField)
+		err = unstructured.SetNestedSlice(obj.Object, overrides, utils.SpecField, utils.OverridesField)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err = util.SetClusterNames(obj, clusterNames)
+	err = utils.SetClusterNames(obj, clusterNames)
 	if err != nil {
 		return nil, err
 	}
@@ -61,13 +61,13 @@ func NewTestObject(typeConfig typeconfig.Interface, namespace string, clusterNam
 }
 
 func OverridesFromFixture(clusterNames []string, fixture *unstructured.Unstructured) ([]interface{}, error) {
-	overridesSlice, ok, err := unstructured.NestedSlice(fixture.Object, util.OverridesField)
+	overridesSlice, ok, err := unstructured.NestedSlice(fixture.Object, utils.OverridesField)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error retrieving overrides field")
 	}
 	if ok && len(clusterNames) > 0 {
 		targetOverrides := overridesSlice[0].(map[string]interface{})
-		targetOverrides[util.ClusterNameField] = clusterNames[0]
+		targetOverrides[utils.ClusterNameField] = clusterNames[0]
 		overridesSlice[0] = targetOverrides
 		return overridesSlice, nil
 	}
@@ -76,7 +76,7 @@ func OverridesFromFixture(clusterNames []string, fixture *unstructured.Unstructu
 
 func NewTestTargetObject(typeConfig typeconfig.Interface, namespace string, fixture *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	obj := &unstructured.Unstructured{}
-	template, ok, err := unstructured.NestedFieldCopy(fixture.Object, util.TemplateField)
+	template, ok, err := unstructured.NestedFieldCopy(fixture.Object, utils.TemplateField)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error retrieving template field")
 	}

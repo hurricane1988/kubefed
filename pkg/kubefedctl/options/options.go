@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,11 +29,10 @@ import (
 
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
-// GlobalSubcommandOptions holds the configuration required by the subcommands of
-// `kubefedctl`.
+// GlobalSubcommandOptions holds the configuration required by the subcommands of `kubefedctl`.
 type GlobalSubcommandOptions struct {
 	HostClusterContext string
 	KubeFedNamespace   string
@@ -45,14 +44,14 @@ type GlobalSubcommandOptions struct {
 func (o *GlobalSubcommandOptions) GlobalSubcommandBind(flags *pflag.FlagSet) {
 	flags.StringVar(&o.Kubeconfig, "kubeconfig", "", "Path to the kubeconfig file to use for CLI requests.")
 	flags.StringVar(&o.HostClusterContext, "host-cluster-context", "", "Host cluster context")
-	flags.StringVar(&o.KubeFedNamespace, "kubefed-namespace", util.DefaultKubeFedSystemNamespace,
+	flags.StringVar(&o.KubeFedNamespace, "kubefed-namespace", utils.DefaultKubeFedSystemNamespace,
 		"Namespace in the host cluster where the KubeFed system components are installed. This namespace will also be the target of propagation if the controller manager is running with namespaced scope.")
 	flags.BoolVar(&o.DryRun, "dry-run", false,
 		"Run the command in dry-run mode, without making any server requests.")
 }
 
 // SetHostClusterContextFromConfig sets the host cluster context to
-// the name of the the config context if a value was not provided.
+// the name of the config context if a value was not provided.
 func (o *GlobalSubcommandOptions) SetHostClusterContextFromConfig(config clientcmd.ClientConfig) error {
 	if len(o.HostClusterContext) > 0 {
 		return nil
@@ -109,15 +108,15 @@ func GetScopeFromKubeFedConfig(hostConfig *rest.Config, namespace string) (apiex
 	}
 
 	fedConfig := &fedv1b1.KubeFedConfig{}
-	err = client.Get(context.TODO(), fedConfig, namespace, util.KubeFedConfigName)
+	err = client.Get(context.TODO(), fedConfig, namespace, utils.KubeFedConfigName)
 	if apierrors.IsNotFound(err) {
 		return "", errors.Errorf(
 			"A KubeFedConfig named %q was not found in namespace %q. Is a KubeFed control plane running in this namespace?",
-			util.KubeFedConfigName, namespace)
+			utils.KubeFedConfigName, namespace)
 	} else if err != nil {
-		config := util.QualifiedName{
+		config := utils.QualifiedName{
 			Namespace: namespace,
-			Name:      util.KubeFedConfigName,
+			Name:      utils.KubeFedConfigName,
 		}
 		err = errors.Wrapf(err, "Error retrieving KubeFedConfig %q", config)
 		return "", err

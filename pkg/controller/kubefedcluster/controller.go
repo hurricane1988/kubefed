@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import (
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
 	genscheme "sigs.k8s.io/kubefed/pkg/client/generic/scheme"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/metrics"
 )
 
@@ -63,7 +63,7 @@ type ClusterController struct {
 	client genericclient.Client
 
 	// clusterHealthCheckConfig is the configurable parameters for cluster health check
-	clusterHealthCheckConfig *util.ClusterHealthCheckConfig
+	clusterHealthCheckConfig *utils.ClusterHealthCheckConfig
 
 	mu sync.RWMutex
 
@@ -82,7 +82,7 @@ type ClusterController struct {
 }
 
 // StartClusterController starts a new cluster controller.
-func StartClusterController(config *util.ControllerConfig, clusterHealthCheckConfig *util.ClusterHealthCheckConfig, stopChan <-chan struct{}) error {
+func StartClusterController(config *utils.ControllerConfig, clusterHealthCheckConfig *utils.ClusterHealthCheckConfig, stopChan <-chan struct{}) error {
 	controller, err := newClusterController(config, clusterHealthCheckConfig)
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func StartClusterController(config *util.ControllerConfig, clusterHealthCheckCon
 }
 
 // newClusterController returns a new cluster controller
-func newClusterController(config *util.ControllerConfig, clusterHealthCheckConfig *util.ClusterHealthCheckConfig) (*ClusterController, error) {
+func newClusterController(config *utils.ControllerConfig, clusterHealthCheckConfig *utils.ClusterHealthCheckConfig) (*ClusterController, error) {
 	kubeConfig := restclient.CopyConfig(config.KubeConfig)
 	kubeConfig.Timeout = clusterHealthCheckConfig.Timeout
 	restclient.AddUserAgent(kubeConfig, "cluster-controller")
@@ -113,11 +113,11 @@ func newClusterController(config *util.ControllerConfig, clusterHealthCheckConfi
 	cc.eventRecorder = recorder
 
 	var err error
-	_, cc.clusterController, err = util.NewGenericInformerWithEventHandler(
+	_, cc.clusterController, err = utils.NewGenericInformerWithEventHandler(
 		config.KubeConfig,
 		config.KubeFedNamespace,
 		&fedv1b1.KubeFedCluster{},
-		util.NoResyncPeriod,
+		utils.NoResyncPeriod,
 		&cache.ResourceEventHandlerFuncs{
 			DeleteFunc: func(obj interface{}) {
 				castObj, ok := obj.(*fedv1b1.KubeFedCluster)
@@ -182,7 +182,7 @@ func (cc *ClusterController) addToClusterSet(obj *fedv1b1.KubeFedCluster) {
 
 	klog.V(1).Infof("ClusterController observed a new cluster: %v", obj.Name)
 
-	// create the restclient of cluster
+	// create the restClient of cluster
 	restClient, err := NewClusterClientSet(obj, cc.client, cc.fedNamespace, cc.clusterHealthCheckConfig.Timeout)
 	if err != nil || restClient.kubeClient == nil {
 		cc.RecordError(obj, "MalformedClusterConfig", errors.Wrap(err, "The configuration for this cluster may be malformed"))
@@ -265,14 +265,14 @@ func (cc *ClusterController) RecordError(cluster runtimeclient.Object, errorCode
 }
 
 func thresholdAdjustedClusterStatus(clusterStatus *fedv1b1.KubeFedClusterStatus, storedData *ClusterData,
-	clusterHealthCheckConfig *util.ClusterHealthCheckConfig) *fedv1b1.KubeFedClusterStatus {
+	clusterHealthCheckConfig *utils.ClusterHealthCheckConfig) *fedv1b1.KubeFedClusterStatus {
 	if storedData.clusterStatus == nil {
 		storedData.resultRun = 1
 		return clusterStatus
 	}
 
 	threshold := clusterHealthCheckConfig.FailureThreshold
-	if util.IsClusterReady(clusterStatus) {
+	if utils.IsClusterReady(clusterStatus) {
 		threshold = clusterHealthCheckConfig.SuccessThreshold
 	}
 
@@ -298,7 +298,7 @@ func thresholdAdjustedClusterStatus(clusterStatus *fedv1b1.KubeFedClusterStatus,
 }
 
 func clusterStatusEqual(newClusterStatus, oldClusterStatus *fedv1b1.KubeFedClusterStatus) bool {
-	return util.IsClusterReady(newClusterStatus) == util.IsClusterReady(oldClusterStatus)
+	return utils.IsClusterReady(newClusterStatus) == utils.IsClusterReady(oldClusterStatus)
 }
 
 func setProbeTime(clusterStatus *fedv1b1.KubeFedClusterStatus, probeTime metav1.Time) {

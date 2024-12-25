@@ -1,5 +1,5 @@
 /*
-Copyright 2019 The Kubernetes Authors.
+Copyright 2024 The CodeFuture Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,20 +20,20 @@ import (
 	"reflect"
 	"testing"
 
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 func TestUpdateOverridesMap(t *testing.T) {
 	cluster := "cluster1"
 
 	testCases := map[string]struct {
-		overridesMap util.OverridesMap
+		overridesMap utils.OverridesMap
 		replicasMap  map[string]int64
 		expected     map[string]int64
 	}{
 		"Retain other overrides when removing replica override for unscheduled": {
-			overridesMap: util.OverridesMap{
-				cluster: util.ClusterOverrides{
+			overridesMap: utils.OverridesMap{
+				cluster: utils.ClusterOverrides{
 					{
 						Path:  replicasPath,
 						Value: int64(0),
@@ -50,8 +50,8 @@ func TestUpdateOverridesMap(t *testing.T) {
 			},
 		},
 		"Update existing replica override": {
-			overridesMap: util.OverridesMap{
-				cluster: util.ClusterOverrides{
+			overridesMap: utils.OverridesMap{
+				cluster: utils.ClusterOverrides{
 					{
 						Path:  replicasPath,
 						Value: int64(0),
@@ -71,8 +71,8 @@ func TestUpdateOverridesMap(t *testing.T) {
 			},
 		},
 		"Add new replica override": {
-			overridesMap: util.OverridesMap{
-				cluster: util.ClusterOverrides{
+			overridesMap: utils.OverridesMap{
+				cluster: utils.ClusterOverrides{
 					{
 						Path:  "/ultimate/answer",
 						Value: int64(42),

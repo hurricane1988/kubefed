@@ -34,12 +34,12 @@ import (
 	"sigs.k8s.io/kubefed/pkg/apis/core/typeconfig"
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
 	genericclient "sigs.k8s.io/kubefed/pkg/client/generic"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl/federate"
 	"sigs.k8s.io/kubefed/test/common"
 	"sigs.k8s.io/kubefed/test/e2e/framework"
 
-	. "github.com/onsi/ginkgo" //nolint:stylecheck
+	"github.com/onsi/ginkgo"
 )
 
 type testResources struct {
@@ -47,15 +47,17 @@ type testResources struct {
 	typeConfig     typeconfig.Interface
 }
 
-var _ = Describe("Federate ", func() {
+var _ = ginkgo.Describe("Federate ", func() {
 	f := framework.NewKubeFedFramework("federate-resource")
 	tl := framework.NewE2ELogger()
+	ctx := context.Background()
+	immediate := false
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)
 
 	var kubeConfig *restclient.Config
 	var client genericclient.Client
 
-	BeforeEach(func() {
+	ginkgo.BeforeEach(func() {
 		if kubeConfig == nil {
 			var err error
 			kubeConfig = f.KubeConfig()
@@ -71,7 +73,7 @@ var _ = Describe("Federate ", func() {
 	for _, testKey := range toTest {
 		typeConfigName := testKey
 		fixture := typeConfigFixtures[testKey]
-		It(fmt.Sprintf("resource %q, should create an equivalent federated resource in the host cluster", typeConfigName), func() {
+		ginkgo.It(fmt.Sprintf("resource %q, should create an equivalent federated resource in the host cluster", typeConfigName), func() {
 			typeConfig := &fedv1b1.FederatedTypeConfig{}
 			err := client.Get(context.Background(), typeConfig, f.KubeFedSystemNamespace(), typeConfigName)
 			if err != nil {
@@ -96,11 +98,11 @@ var _ = Describe("Federate ", func() {
 
 			typeName := typeConfig.GetObjectMeta().Name
 			typeNamespace := typeConfig.GetObjectMeta().Namespace
-			testResourceName := util.NewQualifiedName(createdTargetResource)
+			testResourceName := utils.NewQualifiedName(createdTargetResource)
 
-			defer deleteResources(f, tl, typeConfig, testResourceName)
+			defer deleteResources(ctx, immediate, f, tl, typeConfig, testResourceName)
 
-			By(fmt.Sprintf("Federating %s %q", kind, testResourceName))
+			ginkgo.By(fmt.Sprintf("Federating %s %q", kind, testResourceName))
 
 			fedKind := typeConfig.GetFederatedType().Kind
 			artifacts, err := federate.GetFederateArtifacts(kubeConfig, typeName, typeNamespace, testResourceName, false, false)
@@ -108,19 +110,19 @@ var _ = Describe("Federate ", func() {
 				tl.Fatalf("Error getting %s from %s %q: %v", fedKind, kind, testResourceName, err)
 			}
 
-			artifactsList := []*federate.FederateArtifacts{}
+			var artifactsList []*federate.Artifacts
 			artifactsList = append(artifactsList, artifacts)
 			err = federate.CreateResources(nil, kubeConfig, artifactsList, typeNamespace, false, false)
 			if err != nil {
 				tl.Fatalf("Error creating %s %q: %v", fedKind, testResourceName, err)
 			}
 
-			By("Comparing the test resource and the templates of target resource for equality")
+			ginkgo.By("Comparing the test resource and the templates of target resource for equality")
 			validateTemplateEquality(tl, fedResourceFromAPI(tl, typeConfig, kubeConfig, testResourceName), createdTargetResource, kind, fedKind)
 		})
 	}
 
-	It("namespace with contents, should create equivalent federated resources for all namespaced resources", func() {
+	ginkgo.It("namespace with contents, should create equivalent federated resources for all namespaced resources", func() {
 		if framework.TestContext.LimitedScope {
 			framework.Skipf("Federate namespace with content is not tested when control plane is namespace scoped")
 		}
@@ -146,16 +148,16 @@ var _ = Describe("Federate ", func() {
 
 		namespaceTypeConfig := namespaceTestResource.typeConfig
 		namespaceKind := namespaceTypeConfig.GetTargetType().Kind
-		namespaceResourceName := util.NewQualifiedName(namespaceTestResource.targetResource)
+		namespaceResourceName := utils.NewQualifiedName(namespaceTestResource.targetResource)
 
-		By(fmt.Sprintf("Federating %s %q with content", namespaceKind, namespaceResourceName))
+		ginkgo.By(fmt.Sprintf("Federating %s %q with content", namespaceKind, namespaceResourceName))
 
 		// Artifacts for the parent, that is, the namespace
 		artifacts, err := federate.GetFederateArtifacts(kubeConfig, namespaceTypeConfig.GetObjectMeta().Name, namespaceTypeConfig.GetObjectMeta().Namespace, namespaceResourceName, false, false)
 		if err != nil {
 			tl.Fatalf("Error getting %s from %s %q: %v", namespaceTypeConfig.GetFederatedType().Kind, namespaceKind, namespaceResourceName, err)
 		}
-		artifactsList := []*federate.FederateArtifacts{}
+		artifactsList := []*federate.Artifacts{}
 		artifactsList = append(artifactsList, artifacts)
 
 		skipAPIResourceNames := []string{"pods", "replicasets.extensions"}
@@ -171,11 +173,11 @@ var _ = Describe("Federate ", func() {
 			tl.Fatalf("Error creating resources: %v", err)
 		}
 
-		By("Comparing the test resources with the templates of corresponding federated resources for equality")
+		ginkgo.By("Comparing the test resources with the templates of corresponding federated resources for equality")
 		validateResourcesEqualityFromAPI(tl, createdTargetResources, kubeConfig)
 	})
 
-	It("input yaml from a file, should emit equivalent federated resources", func() {
+	ginkgo.It("input yaml from a file, should emit equivalent federated resources", func() {
 		tmpFile, err := ioutil.TempFile("", "tmp-")
 		if err != nil {
 			tl.Fatalf("Error creating temperory file: %v", err)
@@ -195,25 +197,25 @@ var _ = Describe("Federate ", func() {
 			tl.Fatalf("Error getting target test resources: %v", err)
 		}
 
-		By("Creating a yaml file with a set of test resources")
+		ginkgo.By("Creating a yaml file with a set of test resources")
 		err = federate.WriteUnstructuredObjsToYaml(namedTestTargetResources(targetTestResources), tmpFile)
 		if err != nil {
 			tl.Fatalf("Error writing test resources to yaml")
 		}
 
-		By("Decoding the yaml resources back")
+		ginkgo.By("Decoding the yaml resources back")
 		testResourcesFromFile, err := federate.DecodeUnstructuredFromFile(tmpFile.Name())
 		if err != nil {
 			tl.Fatalf("Failed to decode yaml from file: %v", err)
 		}
 
-		By("Federating the decoded resources")
-		federatedResources, err := federate.FederateResources(testResourcesFromFile)
+		ginkgo.By("Federating the decoded resources")
+		federatedResources, err := federate.Resources(testResourcesFromFile)
 		if err != nil {
 			tl.Fatalf("Error federating resources: %v", err)
 		}
 
-		By("Comparing the original test target resources to the templates in federated resources for equality")
+		ginkgo.By("Comparing the original test target resources to the templates in federated resources for equality")
 		validateResourcesEquality(tl, targetTestResources, federatedResources)
 
 	})
@@ -245,8 +247,8 @@ func validateResourcesEqualityFromAPI(tl common.TestLogger, testResources []test
 		typeConfig := resources.typeConfig
 		kind := typeConfig.GetTargetType().Kind
 		targetResource := resources.targetResource
-		testResourceName := util.NewQualifiedName(targetResource)
-		if kind == util.NamespaceKind {
+		testResourceName := utils.NewQualifiedName(targetResource)
+		if kind == utils.NamespaceKind {
 			testResourceName.Namespace = testResourceName.Name
 		}
 		fedResource := fedResourceFromAPI(tl, typeConfig, kubeConfig, testResourceName)
@@ -255,21 +257,21 @@ func validateResourcesEqualityFromAPI(tl common.TestLogger, testResources []test
 }
 
 func validateTemplateEquality(tl common.TestLogger, fedResource, targetResource *unstructured.Unstructured, kind, fedKind string) {
-	qualifiedName := util.NewQualifiedName(fedResource)
-	templateMap, ok, err := unstructured.NestedFieldCopy(fedResource.Object, util.SpecField, util.TemplateField)
+	qualifiedName := utils.NewQualifiedName(fedResource)
+	templateMap, ok, err := unstructured.NestedFieldCopy(fedResource.Object, utils.SpecField, utils.TemplateField)
 	if err != nil || !ok {
 		tl.Fatalf("Error retrieving template from %s %q", fedKind, qualifiedName)
 	}
 
 	expectedResource := &unstructured.Unstructured{}
 	expectedResource.Object = templateMap.(map[string]interface{})
-	if err := federate.RemoveUnwantedFields(expectedResource); err != nil {
+	if err = federate.RemoveUnwantedFields(expectedResource); err != nil {
 		tl.Fatalf("Failed to remove unwanted fields from expected resource: %v", err)
 	}
-	if err := federate.RemoveUnwantedFields(targetResource); err != nil {
+	if err = federate.RemoveUnwantedFields(targetResource); err != nil {
 		tl.Fatalf("Failed to remove unwanted fields from target resource: %v", err)
 	}
-	if kind == util.NamespaceKind {
+	if kind == utils.NamespaceKind {
 		unstructured.RemoveNestedField(targetResource.Object, "spec", "finalizers")
 	}
 
@@ -278,28 +280,28 @@ func validateTemplateEquality(tl common.TestLogger, fedResource, targetResource 
 	}
 }
 
-func deleteResources(f framework.KubeFedFramework, tl common.TestLogger, typeConfig typeconfig.Interface, testResourceName util.QualifiedName) {
+func deleteResources(ctx context.Context, immediate bool, f framework.KubeFedFramework, tl common.TestLogger, typeConfig typeconfig.Interface, testResourceName utils.QualifiedName) {
 	client := getFedClient(tl, typeConfig, f.KubeConfig())
-	deleteResource(tl, client, testResourceName, typeConfig.GetFederatedType().Kind)
+	deleteResource(ctx, immediate, tl, client, testResourceName, typeConfig.GetFederatedType().Kind)
 
 	targetAPIResource := typeConfig.GetTargetType()
 	// Namespaced resources will be deleted in ns cleanup
 	if !targetAPIResource.Namespaced {
 		testClusters := f.ClusterDynamicClients(&targetAPIResource, "federate-resource")
 		for _, cluster := range testClusters {
-			deleteResource(tl, cluster.Client, testResourceName, targetAPIResource.Kind)
+			deleteResource(ctx, immediate, tl, cluster.Client, testResourceName, targetAPIResource.Kind)
 		}
 	}
 }
 
-func deleteResource(tl common.TestLogger, client util.ResourceClient, qualifiedName util.QualifiedName, kind string) {
+func deleteResource(ctx context.Context, immediate bool, tl common.TestLogger, client utils.ResourceClient, qualifiedName utils.QualifiedName, kind string) {
 	tl.Logf("Deleting %s %q", kind, qualifiedName)
 	err := client.Resources(qualifiedName.Namespace).Delete(context.Background(), qualifiedName.Name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		tl.Fatalf("Error deleting %s %q: %v", kind, qualifiedName, err)
 	}
 
-	err = wait.PollImmediate(framework.PollInterval, framework.TestContext.SingleCallTimeout, func() (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx, framework.PollInterval, framework.TestContext.SingleCallTimeout, immediate, func(ctx context.Context) (bool, error) {
 		_, err := client.Resources(qualifiedName.Namespace).Get(context.Background(), qualifiedName.Name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return true, nil
@@ -311,7 +313,7 @@ func deleteResource(tl common.TestLogger, client util.ResourceClient, qualifiedN
 	}
 }
 
-func fedResourceFromAPI(tl common.TestLogger, typeConfig typeconfig.Interface, kubeConfig *restclient.Config, qualifiedName util.QualifiedName) *unstructured.Unstructured {
+func fedResourceFromAPI(tl common.TestLogger, typeConfig typeconfig.Interface, kubeConfig *restclient.Config, qualifiedName utils.QualifiedName) *unstructured.Unstructured {
 	client := getFedClient(tl, typeConfig, kubeConfig)
 	fedResource, err := client.Resources(qualifiedName.Namespace).Get(context.Background(), qualifiedName.Name, metav1.GetOptions{})
 	if err != nil {
@@ -320,7 +322,7 @@ func fedResourceFromAPI(tl common.TestLogger, typeConfig typeconfig.Interface, k
 	return fedResource
 }
 
-func targetResourceFromAPI(tl common.TestLogger, typeConfig typeconfig.Interface, kubeConfig *restclient.Config, qualifiedName util.QualifiedName) *unstructured.Unstructured {
+func targetResourceFromAPI(tl common.TestLogger, typeConfig typeconfig.Interface, kubeConfig *restclient.Config, qualifiedName utils.QualifiedName) *unstructured.Unstructured {
 	client := getTargetClient(tl, typeConfig, kubeConfig)
 	targetResource, err := client.Resources(qualifiedName.Namespace).Get(context.Background(), qualifiedName.Name, metav1.GetOptions{})
 	if err != nil {
@@ -329,20 +331,20 @@ func targetResourceFromAPI(tl common.TestLogger, typeConfig typeconfig.Interface
 	return targetResource
 }
 
-func getFedClient(tl common.TestLogger, typeConfig typeconfig.Interface, kubeConfig *restclient.Config) util.ResourceClient {
+func getFedClient(tl common.TestLogger, typeConfig typeconfig.Interface, kubeConfig *restclient.Config) utils.ResourceClient {
 	fedAPIResource := typeConfig.GetFederatedType()
 	fedKind := fedAPIResource.Kind
-	client, err := util.NewResourceClient(kubeConfig, &fedAPIResource)
+	client, err := utils.NewResourceClient(kubeConfig, &fedAPIResource)
 	if err != nil {
 		tl.Fatalf("Error getting resource client for %s", fedKind)
 	}
 	return client
 }
 
-func getTargetClient(tl common.TestLogger, typeConfig typeconfig.Interface, kubeConfig *restclient.Config) util.ResourceClient {
+func getTargetClient(tl common.TestLogger, typeConfig typeconfig.Interface, kubeConfig *restclient.Config) utils.ResourceClient {
 	apiResource := typeConfig.GetTargetType()
 	fedKind := apiResource.Kind
-	client, err := util.NewResourceClient(kubeConfig, &apiResource)
+	client, err := utils.NewResourceClient(kubeConfig, &apiResource)
 	if err != nil {
 		tl.Fatalf("Error getting resource client for %s", fedKind)
 	}
@@ -356,7 +358,7 @@ func namedTestTargetResources(testResources []testResources) []*unstructured.Uns
 		// In some tests name is never populated as the resource is
 		// not created in API. Setting a name enables matching resources using names.
 		// Arg testResources stores the object pointer, updating the name
-		// here also reflects in the passed testResources.
+		// here also reflects in the past testResources.
 		r.SetName(fmt.Sprintf("%s-%s", r.GetGenerateName(), uuid.New()))
 		resources = append(resources, r)
 	}
@@ -365,7 +367,7 @@ func namedTestTargetResources(testResources []testResources) []*unstructured.Uns
 
 func getTargetTestResources(client genericclient.Client, fixtures map[string]*unstructured.Unstructured,
 	systemNamespace, testNamespace string, typeConfigNames []string) ([]testResources, error) {
-	resources := []testResources{}
+	var resources []testResources
 	for _, typeConfigName := range typeConfigNames {
 		fixture := fixtures[typeConfigName]
 
@@ -387,13 +389,13 @@ func getTargetTestResources(client genericclient.Client, fixtures map[string]*un
 }
 
 func createTargetResources(resources []testResources, kubeConfig *restclient.Config) ([]testResources, error) {
-	createResources := []testResources{}
+	var createResources []testResources
 	for _, resource := range resources {
 		typeConfig := resource.typeConfig
 		targetResource := resource.targetResource
 		createdTargetResource, err := common.CreateResource(kubeConfig, typeConfig.GetTargetType(), targetResource)
 		if err != nil {
-			return resources, errors.Wrapf(err, "Error creating target resource %q", util.NewQualifiedName(targetResource))
+			return resources, errors.Wrapf(err, "Error creating target resource %q", utils.NewQualifiedName(targetResource))
 		}
 
 		createResources = append(createResources, testResources{targetResource: createdTargetResource, typeConfig: typeConfig})
@@ -409,7 +411,7 @@ func targetNamespaceTestResources(tl common.TestLogger, client genericclient.Cli
 		tl.Fatalf("Error retrieving federatedtypeconfig %q: %v", typeConfigName, err)
 	}
 
-	resourceName := util.QualifiedName{Name: targetNamespace, Namespace: targetNamespace}
+	resourceName := utils.QualifiedName{Name: targetNamespace, Namespace: targetNamespace}
 	resource := targetResourceFromAPI(tl, typeConfig, kubeConfig, resourceName)
 
 	return testResources{targetResource: resource, typeConfig: typeConfig}

@@ -32,7 +32,7 @@ import (
 
 	"sigs.k8s.io/kubefed/pkg/client/generic"
 	"sigs.k8s.io/kubefed/pkg/controller/sync/status"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/metrics"
 )
 
@@ -51,17 +51,17 @@ type unmanagedDispatcherImpl struct {
 	dispatcher *operationDispatcherImpl
 
 	targetGVK  schema.GroupVersionKind
-	targetName util.QualifiedName
+	targetName utils.QualifiedName
 
 	recorder dispatchRecorder
 }
 
-func NewUnmanagedDispatcher(clientAccessor clientAccessorFunc, targetGVK schema.GroupVersionKind, targetName util.QualifiedName) UnmanagedDispatcher {
+func NewUnmanagedDispatcher(clientAccessor clientAccessorFunc, targetGVK schema.GroupVersionKind, targetName utils.QualifiedName) UnmanagedDispatcher {
 	dispatcher := newOperationDispatcher(clientAccessor, nil)
 	return newUnmanagedDispatcher(dispatcher, nil, targetGVK, targetName)
 }
 
-func newUnmanagedDispatcher(dispatcher *operationDispatcherImpl, recorder dispatchRecorder, targetGVK schema.GroupVersionKind, targetName util.QualifiedName) *unmanagedDispatcherImpl {
+func newUnmanagedDispatcher(dispatcher *operationDispatcherImpl, recorder dispatchRecorder, targetGVK schema.GroupVersionKind, targetName utils.QualifiedName) *unmanagedDispatcherImpl {
 	return &unmanagedDispatcherImpl{
 		dispatcher: dispatcher,
 		targetGVK:  targetGVK,
@@ -79,7 +79,7 @@ func (d *unmanagedDispatcherImpl) Delete(clusterName string, opts ...runtimeclie
 	d.dispatcher.incrementOperationsInitiated()
 	const op = "delete"
 	const opContinuous = "Deleting"
-	go d.dispatcher.clusterOperation(clusterName, op, func(client generic.Client) util.ReconciliationStatus {
+	go d.dispatcher.clusterOperation(clusterName, op, func(client generic.Client) utils.ReconciliationStatus {
 		targetName := d.targetNameForCluster(clusterName)
 		if d.recorder == nil {
 			klog.V(2).Infof(eventTemplate, opContinuous, d.targetGVK.Kind, targetName, clusterName)
@@ -100,10 +100,10 @@ func (d *unmanagedDispatcherImpl) Delete(clusterName string, opts ...runtimeclie
 			} else {
 				d.recorder.recordOperationError(status.DeletionFailed, clusterName, op, err)
 			}
-			return util.StatusError
+			return utils.StatusError
 		}
 		metrics.DispatchOperationDurationFromStart("delete", start)
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	})
 }
 
@@ -111,7 +111,7 @@ func (d *unmanagedDispatcherImpl) RemoveManagedLabel(clusterName string, cluster
 	d.dispatcher.incrementOperationsInitiated()
 	const op = "remove managed label from"
 	const opContinuous = "Removing managed label from"
-	go d.dispatcher.clusterOperation(clusterName, op, func(client generic.Client) util.ReconciliationStatus {
+	go d.dispatcher.clusterOperation(clusterName, op, func(client generic.Client) utils.ReconciliationStatus {
 		if d.recorder == nil {
 			klog.V(2).Infof(eventTemplate, opContinuous, d.targetGVK.Kind, d.targetNameForCluster(clusterName), clusterName)
 		} else {
@@ -122,7 +122,7 @@ func (d *unmanagedDispatcherImpl) RemoveManagedLabel(clusterName string, cluster
 		updateObj := clusterObj.DeepCopy()
 		patch := runtimeclient.MergeFrom(updateObj.DeepCopy())
 
-		util.RemoveManagedLabel(updateObj)
+		utils.RemoveManagedLabel(updateObj)
 
 		err := client.Patch(context.Background(), updateObj, patch)
 		if err != nil {
@@ -132,9 +132,9 @@ func (d *unmanagedDispatcherImpl) RemoveManagedLabel(clusterName string, cluster
 			} else {
 				d.recorder.recordOperationError(status.LabelRemovalFailed, clusterName, op, err)
 			}
-			return util.StatusError
+			return utils.StatusError
 		}
-		return util.StatusAllOK
+		return utils.StatusAllOK
 	})
 }
 
@@ -142,8 +142,8 @@ func (d *unmanagedDispatcherImpl) wrapOperationError(err error, clusterName, ope
 	return wrapOperationError(err, operation, d.targetGVK.Kind, d.targetNameForCluster(clusterName).String(), clusterName)
 }
 
-func (d *unmanagedDispatcherImpl) targetNameForCluster(clusterName string) util.QualifiedName {
-	return util.QualifiedNameForCluster(clusterName, d.targetName)
+func (d *unmanagedDispatcherImpl) targetNameForCluster(clusterName string) utils.QualifiedName {
+	return utils.QualifiedNameForCluster(clusterName, d.targetName)
 }
 
 func wrapOperationError(err error, operation, targetKind, targetName, clusterName string) error {

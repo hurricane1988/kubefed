@@ -33,17 +33,17 @@ import (
 	"k8s.io/client-go/rest"
 
 	fedv1b1 "sigs.k8s.io/kubefed/pkg/apis/core/v1beta1"
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/pkg/kubefedctl"
 	kfenable "sigs.k8s.io/kubefed/pkg/kubefedctl/enable"
 	kfenableopts "sigs.k8s.io/kubefed/pkg/kubefedctl/options"
 	"sigs.k8s.io/kubefed/test/common"
 	"sigs.k8s.io/kubefed/test/e2e/framework"
 
-	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo"
 )
 
-var _ = Describe("Federated CRD resources", func() {
+var _ = ginkgo.Describe("Federated CRD resources", func() {
 	f := framework.NewKubeFedFramework("crd-resources")
 	ctx := context.Background()
 	immediate := false
@@ -53,8 +53,8 @@ var _ = Describe("Federated CRD resources", func() {
 	}
 	for i := range namespaceScoped {
 		namespaced := namespaceScoped[i]
-		Describe(fmt.Sprintf("with namespaced=%v", namespaced), func() {
-			It("should be created, read, updated and deleted successfully", func() {
+		ginkgo.Describe(fmt.Sprintf("with namespaced=%v", namespaced), func() {
+			ginkgo.It("should be created, read, updated and deleted successfully", func() {
 				if framework.TestContext.LimitedScope {
 					// The service account of clusters registered with
 					// a namespaced control plane won't have
@@ -139,11 +139,11 @@ func validateCrdCrud(ctx context.Context, immediate bool, f framework.KubeFedFra
 		tl.Fatalf("Timed out waiting for target type %q to be published as an available resource", targetName)
 	}
 
-	enableTypeDirective := &kfenable.EnableTypeDirective{
+	enableTypeDirective := &kfenable.TypeDirective{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: targetAPIResource.Name,
 		},
-		Spec: kfenable.EnableTypeDirectiveSpec{
+		Spec: kfenable.TypeDirectiveSpec{
 			TargetVersion:    targetAPIResource.Version,
 			FederatedGroup:   targetAPIResource.Group,
 			FederatedVersion: targetAPIResource.Version,
@@ -166,7 +166,7 @@ func validateCrdCrud(ctx context.Context, immediate bool, f framework.KubeFedFra
 		// TODO(marun) Make this more resilient so that removal of all
 		// CRDs is attempted even if the removal of any one CRD fails.
 		objectMeta := typeConfig.GetObjectMeta()
-		qualifiedName := util.QualifiedName{Namespace: f.KubeFedSystemNamespace(), Name: objectMeta.Name}
+		qualifiedName := utils.QualifiedName{Namespace: f.KubeFedSystemNamespace(), Name: objectMeta.Name}
 		err = kubefedctl.DisableFederation(nil, hostConfig, enableTypeDirective, qualifiedName, delete, dryRun, false)
 		if err != nil {
 			tl.Fatalf("Error disabling federation of target type %q: %v", targetAPIResource.Kind, err)
@@ -236,12 +236,12 @@ overrides:
 }
 
 func waitForCrd(ctx context.Context, immediate bool, config *rest.Config, tl common.TestLogger, apiResource metav1.APIResource) {
-	client, err := util.NewResourceClient(config, &apiResource)
+	resourceClient, err := utils.NewResourceClient(config, &apiResource)
 	if err != nil {
 		tl.Fatalf("Error creating client for crd %q: %v", apiResource.Kind, err)
 	}
 	err = wait.PollUntilContextTimeout(ctx, framework.PollInterval, framework.TestContext.SingleCallTimeout, immediate, func(ctx context.Context) (bool, error) {
-		_, err := client.Resources("invalid").Get(context.Background(), "invalid", metav1.GetOptions{})
+		_, err := resourceClient.Resources("invalid").Get(context.Background(), "invalid", metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}

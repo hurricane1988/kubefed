@@ -6,7 +6,7 @@ import (
 	"k8s.io/client-go/discovery"
 	restclient "k8s.io/client-go/rest"
 
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 	"sigs.k8s.io/kubefed/test/e2e/framework"
 
 	. "github.com/onsi/ginkgo" //nolint:stylecheck
@@ -24,7 +24,7 @@ var _ = Describe("KubeFedCluster", func() {
 		clusterList := framework.ListKubeFedClusters(tl, client, framework.TestContext.KubeFedSystemNamespace)
 
 		for _, cluster := range clusterList.Items {
-			config, err := util.BuildClusterConfig(&cluster, client, framework.TestContext.KubeFedSystemNamespace)
+			config, err := utils.BuildClusterConfig(&cluster, client, framework.TestContext.KubeFedSystemNamespace)
 			Expect(err).NotTo(HaveOccurred())
 			restclient.AddUserAgent(config, userAgent)
 

@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"sigs.k8s.io/kubefed/pkg/controller/util"
+	"sigs.k8s.io/kubefed/pkg/controller/utils"
 )
 
 // RetainClusterFields updates the desired object with values retained
@@ -36,10 +36,10 @@ func RetainClusterFields(targetKind string, desiredObj, clusterObj, fedObj *unst
 	desiredObj.SetFinalizers(clusterObj.GetFinalizers())
 	desiredObj.SetAnnotations(clusterObj.GetAnnotations())
 
-	if targetKind == util.ServiceKind {
+	if targetKind == utils.ServiceKind {
 		return retainServiceFields(desiredObj, clusterObj)
 	}
-	if targetKind == util.ServiceAccountKind {
+	if targetKind == utils.ServiceAccountKind {
 		return retainServiceAccountFields(desiredObj, clusterObj)
 	}
 	return retainReplicas(desiredObj, clusterObj, fedObj)
@@ -47,12 +47,12 @@ func RetainClusterFields(targetKind string, desiredObj, clusterObj, fedObj *unst
 
 func retainServiceFields(desiredObj, clusterObj *unstructured.Unstructured) error {
 	// healthCheckNodePort is allocated by APIServer and unchangeable, so it should be retained while updating
-	healthCheckNodePort, ok, err := unstructured.NestedInt64(clusterObj.Object, util.SpecField, util.HealthCheckNodePortField)
+	healthCheckNodePort, ok, err := unstructured.NestedInt64(clusterObj.Object, utils.SpecField, utils.HealthCheckNodePortField)
 	if err != nil {
 		return errors.Wrap(err, "Error retrieving healthCheckNodePort from service")
 	}
 	if ok && healthCheckNodePort > 0 {
-		if err = unstructured.SetNestedField(desiredObj.Object, healthCheckNodePort, util.SpecField, util.HealthCheckNodePortField); err != nil {
+		if err = unstructured.SetNestedField(desiredObj.Object, healthCheckNodePort, utils.SpecField, utils.HealthCheckNodePortField); err != nil {
 			return errors.Wrap(err, "Error setting healthCheckNodePort for service")
 		}
 	}
@@ -60,31 +60,31 @@ func retainServiceFields(desiredObj, clusterObj *unstructured.Unstructured) erro
 	// ClusterIP and NodePort are allocated to Service by cluster, so retain the same if any while updating
 
 	// Retain clusterip and clusterips
-	clusterIP, ok, err := unstructured.NestedString(clusterObj.Object, util.SpecField, util.ClusterIPField)
+	clusterIP, ok, err := unstructured.NestedString(clusterObj.Object, utils.SpecField, utils.ClusterIPField)
 	if err != nil {
 		return errors.Wrap(err, "Error retrieving clusterIP from cluster service")
 	}
 	// !ok could indicate that a cluster ip was not assigned
 	if ok && clusterIP != "" {
-		err := unstructured.SetNestedField(desiredObj.Object, clusterIP, util.SpecField, util.ClusterIPField)
+		err := unstructured.SetNestedField(desiredObj.Object, clusterIP, utils.SpecField, utils.ClusterIPField)
 		if err != nil {
 			return errors.Wrap(err, "Error setting clusterIP for service")
 		}
 	}
-	clusterIPs, ok, err := unstructured.NestedStringSlice(clusterObj.Object, util.SpecField, util.ClusterIPsField)
+	clusterIPs, ok, err := unstructured.NestedStringSlice(clusterObj.Object, utils.SpecField, utils.ClusterIPsField)
 	if err != nil {
 		return errors.Wrap(err, "Error retrieving clusterIPs from cluster service")
 	}
 	// !ok could indicate that cluster ips was not assigned
 	if ok && len(clusterIPs) > 0 {
-		err := unstructured.SetNestedStringSlice(desiredObj.Object, clusterIPs, util.SpecField, util.ClusterIPsField)
+		err := unstructured.SetNestedStringSlice(desiredObj.Object, clusterIPs, utils.SpecField, utils.ClusterIPsField)
 		if err != nil {
 			return errors.Wrap(err, "Error setting clusterIPs for service")
 		}
 	}
 
 	// Retain nodeports
-	clusterPorts, ok, err := unstructured.NestedSlice(clusterObj.Object, util.SpecField, util.PortsField)
+	clusterPorts, ok, err := unstructured.NestedSlice(clusterObj.Object, utils.SpecField, utils.PortsField)
 	if err != nil {
 		return errors.Wrap(err, "Error retrieving ports from cluster service")
 	}
@@ -92,7 +92,7 @@ func retainServiceFields(desiredObj, clusterObj *unstructured.Unstructured) erro
 		return nil
 	}
 	var desiredPorts []interface{}
-	desiredPorts, ok, err = unstructured.NestedSlice(desiredObj.Object, util.SpecField, util.PortsField)
+	desiredPorts, ok, err = unstructured.NestedSlice(desiredObj.Object, utils.SpecField, utils.PortsField)
 	if err != nil {
 		return errors.Wrap(err, "Error retrieving ports from service")
 	}
@@ -112,7 +112,7 @@ func retainServiceFields(desiredObj, clusterObj *unstructured.Unstructured) erro
 			}
 		}
 	}
-	err = unstructured.SetNestedSlice(desiredObj.Object, desiredPorts, util.SpecField, util.PortsField)
+	err = unstructured.SetNestedSlice(desiredObj.Object, desiredPorts, utils.SpecField, utils.PortsField)
 	if err != nil {
 		return errors.Wrap(err, "Error setting ports for service")
 	}
@@ -130,7 +130,7 @@ func retainServiceFields(desiredObj, clusterObj *unstructured.Unstructured) erro
 // placement.  Is there a better way to do this?
 func retainServiceAccountFields(desiredObj, clusterObj *unstructured.Unstructured) error {
 	// Check whether the secrets field is populated in the desired object.
-	desiredSecrets, ok, err := unstructured.NestedSlice(desiredObj.Object, util.SecretsField)
+	desiredSecrets, ok, err := unstructured.NestedSlice(desiredObj.Object, utils.SecretsField)
 	if err != nil {
 		return errors.Wrap(err, "Error retrieving secrets from desired service account")
 	}
@@ -141,12 +141,12 @@ func retainServiceAccountFields(desiredObj, clusterObj *unstructured.Unstructure
 	}
 
 	// Retrieve the secrets from the cluster object and retain them.
-	secrets, ok, err := unstructured.NestedSlice(clusterObj.Object, util.SecretsField)
+	secrets, ok, err := unstructured.NestedSlice(clusterObj.Object, utils.SecretsField)
 	if err != nil {
 		return errors.Wrap(err, "Error retrieving secrets from service account")
 	}
 	if ok && len(secrets) > 0 {
-		err := unstructured.SetNestedField(desiredObj.Object, secrets, util.SecretsField)
+		err := unstructured.SetNestedField(desiredObj.Object, secrets, utils.SecretsField)
 		if err != nil {
 			return errors.Wrap(err, "Error setting secrets for service account")
 		}
@@ -159,17 +159,17 @@ func retainReplicas(desiredObj, clusterObj, fedObj *unstructured.Unstructured) e
 	// configured to do so.  If the replicas field is intended to be
 	// set by the in-cluster HPA controller, not retaining it will
 	// thrash the scheduler.
-	retainReplicas, ok, err := unstructured.NestedBool(fedObj.Object, util.SpecField, util.RetainReplicasField)
+	retainReplicas, ok, err := unstructured.NestedBool(fedObj.Object, utils.SpecField, utils.RetainReplicasField)
 	if err != nil {
 		return err
 	}
 	if ok && retainReplicas {
-		replicas, ok, err := unstructured.NestedInt64(clusterObj.Object, util.SpecField, util.ReplicasField)
+		replicas, ok, err := unstructured.NestedInt64(clusterObj.Object, utils.SpecField, utils.ReplicasField)
 		if err != nil {
 			return err
 		}
 		if ok {
-			err := unstructured.SetNestedField(desiredObj.Object, replicas, util.SpecField, util.ReplicasField)
+			err := unstructured.SetNestedField(desiredObj.Object, replicas, utils.SpecField, utils.ReplicasField)
 			if err != nil {
 				return err
 			}

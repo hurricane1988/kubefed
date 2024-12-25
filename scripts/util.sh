@@ -27,7 +27,7 @@ export RELEASE_TAG_REGEX="^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.?[0-9]+)?$"
 # Utility Functions
 #
 #
-# util::command-installed checks if the command from argument 1 is installed.
+# utils::command-installed checks if the command from argument 1 is installed.
 #
 # Globals:
 #  None
@@ -42,7 +42,7 @@ function util::command-installed() {
 }
 readonly -f util::command-installed
 
-# util::log echoes the supplied argument with a common header.
+# utils::log echoes the supplied argument with a common header.
 #
 # Globals:
 #  None
@@ -55,7 +55,7 @@ function util::log() {
 }
 readonly -f util::log
 
-# util::wait-for-condition blocks until the provided condition becomes true
+# utils::wait-for-condition blocks until the provided condition becomes true
 #
 # Globals:
 #  None
