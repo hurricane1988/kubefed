@@ -234,7 +234,7 @@ func (s *KubeFedSyncController) isSynced() bool {
 	}
 	if !s.fedAccessor.HasSynced() {
 		// The fed accessor will have logged why sync is not yet
-		// complete.
+		// complete.go
 		return false
 	}
 
