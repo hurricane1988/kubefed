@@ -23,7 +23,7 @@ ENV GOPROXY=https://goproxy.cn,direct
 RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -o /tmp/hyperfed cmd/hyperfed/main.go
 
 # --- Stage 2: Prepare the runtime environment ---
-FROM alpine:3.21.2
+FROM alpine:latest
 # Add a non-root user for security
 RUN adduser -D -g hyperfed -u 1001 hyperfed
 # Create the application directory
