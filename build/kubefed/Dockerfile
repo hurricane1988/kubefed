@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # --- Stage 1: Build the application ---
-FROM golang:1.23.2 AS builder
+FROM golang:1.23.5 AS builder
 # Set the working directory in the builder stage
 WORKDIR /build
 # Copy the application source code into the build stage
@@ -23,7 +23,7 @@ ENV GOPROXY=https://goproxy.cn,direct
 RUN CGO_ENABLED=0 GOOS=linux GO111MODULE=on go build -o /tmp/hyperfed cmd/hyperfed/main.go
 
 # --- Stage 2: Prepare the runtime environment ---
-FROM alpine:3.20.0
+FROM alpine:3.21.2
 # Add a non-root user for security
 RUN adduser -D -g hyperfed -u 1001 hyperfed
 # Create the application directory
