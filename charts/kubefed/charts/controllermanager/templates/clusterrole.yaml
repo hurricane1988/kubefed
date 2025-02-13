@@ -78,6 +78,7 @@ rules:
     - list
     - update
     - patch
+    - create
 {{- end }}
 ---
 # This role provides the necessary permissions to create admission reviews.

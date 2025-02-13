@@ -14,7 +14,6 @@
 
 # Image URL to use all building/pushing image targets
 IMG ?= codefuthure/kubefed:v1.0.0
-
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -141,10 +140,10 @@ PLATFORMS ?= linux/amd64,linux/arm64
 
 .PHONY: docker-buildx
 docker-buildx: ## Build and push docker image for the kubefed for cross-platform support.
-	- $(CONTAINER_TOOL) buildx create --name project-v3-builder
-	$(CONTAINER_TOOL) buildx use project-v3-builder
+	- $(CONTAINER_TOOL) buildx create --name kubefed
+	$(CONTAINER_TOOL) buildx use kubefed
 	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f build/kubefed/Dockerfile .
-	- $(CONTAINER_TOOL) buildx rm project-v3-builder
+	- $(CONTAINER_TOOL) buildx rm kubefed
 
 
 ##@ Dependencies
