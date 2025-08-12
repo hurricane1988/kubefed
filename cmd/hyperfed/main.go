@@ -43,6 +43,8 @@ import (
 )
 
 func main() {
+	// Print the version information.
+	version.Print()
 	// Print the terminal information.
 	fmt.Println(version.Term())
 	rand.New(rand.NewSource(time.Now().UnixNano()))

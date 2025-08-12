@@ -32,6 +32,8 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
+	// Print the version information.
+	version.Print()
 	// Print the terminal information.
 	version.Term()
 	if err := kubefedctl.NewKubeFedCtlCommand(os.Stdout).Execute(); err != nil {

@@ -19,8 +19,27 @@ package version
 import (
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/jedib0t/go-pretty/table"
+	"github.com/jedib0t/go-pretty/text"
+	_ "go.uber.org/automaxprocs"
+	"os"
 	"runtime"
-	"sigs.k8s.io/kubefed/pkg/constants"
+	"strconv"
+)
+
+// Base version information.
+//
+// This is the fallback data used when version information from git is not
+// provided via go ldflags (via Makefile).
+var (
+	Version = "latest" // output of "git describe"
+	// GitCommit the prerequisite is that the branch should be
+	// tagged using the correct versioning strategy.
+
+	GitCommit    = "unknown" // sha1 from git, output of $(git rev-parse HEAD)
+	GitTreeState = "unknown" // state of a git tree, either "clean" or "dirty"
+
+	BuildDate = "unknown" // build date in ISO8601 format, output of $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 )
 
 type Info struct {
@@ -43,10 +62,10 @@ func Get() Info {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	return Info{
-		Version:      constants.DefaultVersion,
-		GitCommit:    constants.DefaultGitCommit,
-		GitTreeState: gitTreeState,
-		BuildDate:    constants.DefaultBuildDate,
+		Version:      Version,
+		GitCommit:    GitCommit,
+		GitTreeState: GitTreeState,
+		BuildDate:    BuildDate,
 		GoVersion:    runtime.Version(),
 		Compiler:     runtime.Compiler,
 		Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
@@ -66,6 +85,37 @@ var (
 	WhiteBold    = color.New(color.FgWhite, color.Bold).SprintFunc()
 	forceDetail  = "yaml"
 )
+
+// Print the version information.
+func Print() {
+	v := Get()
+	// 创建表格
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+
+	// 设置表头（横向）
+	t.AppendHeader(table.Row{
+		"Version", "Git Commit", "Build Date",
+		"Go Version", "Compiler", "Platform", "Runtime Cores", "Total Memory",
+	})
+
+	// 添加数据
+	t.AppendRow([]interface{}{
+		v.Version, v.GitCommit, v.BuildDate,
+		v.GoVersion, v.Compiler, v.Platform,
+		strconv.Itoa(v.RuntimeCores) + " cores",
+		strconv.Itoa(v.TotalMem) + " KB",
+	})
+
+	// 设置表格样式
+	t.SetStyle(table.StyleDefault)                      // 轻量风格
+	t.Style().Format.Header = text.FormatUpper          // 加粗表头
+	t.Style().Color.Header = text.Colors{text.FgHiBlue} // 高亮蓝色
+	t.Style().Options.SeparateRows = true               // 让每一行独立，更清晰
+
+	// 渲染表格
+	t.Render()
+}
 
 // Term Print the terminal
 func Term() string {

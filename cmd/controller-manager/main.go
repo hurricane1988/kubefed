@@ -32,6 +32,8 @@ import (
 
 // Controller-manager main.
 func main() {
+	// Print the version information.
+	version.Print()
 	// Print the terminal information.
 	fmt.Println(version.Term())
 	// The core code for initializing logs using logs.InitLogs() sets up the configuration for klog by invoking

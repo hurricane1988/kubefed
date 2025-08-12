@@ -13,7 +13,9 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-IMG ?= codefuthure/kubefed:v1.0.0
+VERSION ?= v1.0.1
+IMG ?= codefuthure/kubefed
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -26,6 +28,19 @@ endif
 # scaffolded by default. However, you might want to replace it to use other
 # tools. (i.e. podman)
 CONTAINER_TOOL ?= docker
+
+# Setting SHELL to bash allows bash commands to be executed by recipes.
+# Options are set to exit when a recipe line exits non-zero or a piped command fails.
+SHELL = /usr/bin/env bash -o pipefail
+.SHELLFLAGS = -ec
+
+GIT_COMMIT ?= $(shell git rev-parse HEAD)
+GIT_TREE_STATE ?= $(shell if git diff --quiet && git diff --cached --quiet; then echo clean; else echo dirty; fi)
+
+LDFLAG_OPTIONS = -ldflags "-X sigs.k8s.io/kubefed/pkg/version.Version=$(VERSION) \
+                      -X sigs.k8s.io/kubefed/pkg/version.GitCommit=$(GIT_COMMIT) \
+                      -X sigs.k8s.io/kubefed/pkg/version.GitTreeState=$(GIT_TREE_STATE) \
+                      -X sigs.k8s.io/kubefed/pkg/version.BuildDate=$(BUILDDATE)"
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
@@ -45,10 +60,6 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen-$(CONTROLLER_TOOLS_VERSION)
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 
-# Setting SHELL to bash allows bash commands to be executed by recipes.
-# Options are set to exit when a recipe line exits non-zero or a piped command fails.
-SHELL = /usr/bin/env bash -o pipefail
-.SHELLFLAGS = -ec
 
 # Retrieve the Git version information, including any local changes
 GIT_VERSION ?= $(shell git describe --always --dirty)
@@ -110,10 +121,10 @@ test: ## Run unit test.
 
 .PHONY: build
 build: fmt vet ## build hyperfed controller kubefedctl webhook binary.
-	go build -o bin/controller-manager cmd/controller-manager/main.go
-	go build -o bin/hyperfed cmd/hyperfed/main.go
-	go build -o bin/kubefedctl cmd/kubefedctl/main.go
-	go build -o bin/webhook cmd/webhook/main.go
+	go build $(LDFLAG_OPTIONS) -o bin/controller-manager cmd/controller-manager/main.go
+	go build $(LDFLAG_OPTIONS) -o bin/hyperfed cmd/hyperfed/main.go
+	go build $(LDFLAG_OPTIONS) -o bin/kubefedctl cmd/kubefedctl/main.go
+	go build $(LDFLAG_OPTIONS) -o bin/webhook cmd/webhook/main.go
 
 .PHONY: lint
 lint: ## Run golangci-lint check.
@@ -124,11 +135,15 @@ lint: ## Run golangci-lint check.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: ## Build docker image with the kubefed.
-	$(CONTAINER_TOOL) build -t ${IMG} -f build/kubefed/Dockerfile .
+	$(CONTAINER_TOOL) build -t ${IMG}:${VERSION} -f build/kubefed/Dockerfile \
+							--build-arg VERSION=$(VERSION) \
+							--build-arg GITCOMMIT=$(GIT_COMMIT) \
+							--build-arg GITTREESTATE=$(GIT_TREE_STATE) \
+							--build-arg BUILDDATE=$(BUILDDATE) .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the kubefed.
-	$(CONTAINER_TOOL) push ${IMG}
+	$(CONTAINER_TOOL) ${IMG}:${VERSION}
 
 # PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
@@ -142,7 +157,8 @@ PLATFORMS ?= linux/amd64,linux/arm64
 docker-buildx: ## Build and push docker image for the kubefed for cross-platform support.
 	- $(CONTAINER_TOOL) buildx create --name kubefed
 	$(CONTAINER_TOOL) buildx use kubefed
-	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f build/kubefed/Dockerfile .
+	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG}:${VERSION} -f build/kubefed/Dockerfile \
+ 											--build-arg VERSION=$(VERSION) --build-arg GITCOMMIT=$(GIT_COMMIT) --build-arg GIT_TREE_STATE=$(GIT_TREE_STATE) --build-arg BUILDDATE=$(BUILDDATE) .
 	- $(CONTAINER_TOOL) buildx rm kubefed
 
 

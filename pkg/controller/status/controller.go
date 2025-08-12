@@ -95,7 +95,7 @@ func StartKubeFedStatusController(controllerConfig *utils.ControllerConfig, stop
 	if controllerConfig.MinimizeLatency {
 		controller.minimizeLatency()
 	}
-	klog.Infof(fmt.Sprintf("Starting status controller for %q", typeConfig.GetFederatedType().Kind))
+	klog.Infof("Starting status controller for %q", typeConfig.GetFederatedType().Kind)
 	controller.Run(stopChan)
 	return nil
 }

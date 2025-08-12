@@ -15,10 +15,3 @@ limitations under the License.
 */
 
 package constants
-
-// Default release information.
-const (
-	DefaultVersion   = "1.0.0"
-	DefaultGitCommit = "b0f2368d-dirty"
-	DefaultBuildDate = "2024-12-23T07:32:47Z"
-)
