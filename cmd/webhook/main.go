@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
+
 	"sigs.k8s.io/kubefed/pkg/version"
 
 	"k8s.io/component-base/logs"
@@ -28,10 +29,10 @@ import (
 )
 
 func main() {
-	// Print the version information.
-	version.Print()
 	// Print the terminal information.
 	fmt.Println(version.Term())
+	// Print the version information.
+	version.Print()
 	logs.InitLogs()
 	defer logs.FlushLogs()
 

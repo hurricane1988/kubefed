@@ -78,9 +78,10 @@ type LeaderElectConfig struct {
 type ResourceLockType string
 
 const (
-	ConfigMapsResourceLock ResourceLockType = "configmaps"
-	EndpointsResourceLock  ResourceLockType = "endpoints"
-	LeasesResourceLock     ResourceLockType = "leases"
+	LeaderElectionRecordAnnotationKey = "control-plane.alpha.kubernetes.io/leader"
+	EndpointsResourceLock             = "endpoints"
+	ConfigMapsResourceLock            = "configmaps"
+	LeasesResourceLock                = "leases"
 )
 
 type FeatureGatesConfig struct {

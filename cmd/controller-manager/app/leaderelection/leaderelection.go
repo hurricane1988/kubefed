@@ -71,11 +71,11 @@ func NewKubeFedLeaderElector(opts *options.Options, fnStartControllers func(*opt
 
 	// resourcelock.New 用于生成一个新的资源锁，确保在多个实例中只有一个被选为领导者
 	rl, err := resourcelock.New(
-		string(opts.LeaderElection.ResourceLock), // 锁类型（分为：configmaps、endpoints、leases 三种）
-		opts.Config.KubeFedNamespace,             // 锁所在的命名空间
-		component,                                // 组件名称，此处为kubefed-controller-manager
-		leaderElectionClient.CoreV1(),            // Kubernetes client 用于操作 CoreV1（通常是 Pod、Service 等资源）
-		leaderElectionClient.CoordinationV1(),    // Kubernetes client 用于操作 CoordinationV1（用于领导者选举）
+		resourcelock.LeasesResourceLock,
+		opts.Config.KubeFedNamespace,          // 锁所在的命名空间
+		component,                             // 组件名称，此处为kubefed-controller-manager
+		leaderElectionClient.CoreV1(),         // Kubernetes client 用于操作 CoreV1（通常是 Pod、Service 等资源）
+		leaderElectionClient.CoordinationV1(), // Kubernetes client 用于操作 CoordinationV1（用于领导者选举）
 
 		// 锁的配置
 		resourcelock.ResourceLockConfig{

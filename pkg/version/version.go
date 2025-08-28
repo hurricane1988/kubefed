@@ -18,13 +18,15 @@ package version
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+	"strconv"
+
 	"github.com/fatih/color"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/jedib0t/go-pretty/text"
 	_ "go.uber.org/automaxprocs"
-	"os"
-	"runtime"
-	"strconv"
+	"sigs.k8s.io/kubefed/pkg/constants"
 )
 
 // Base version information.
@@ -40,9 +42,14 @@ var (
 	GitTreeState = "unknown" // state of a git tree, either "clean" or "dirty"
 
 	BuildDate = "unknown" // build date in ISO8601 format, output of $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+	Community = constants.DefaultCommunity
+	Author    = constants.DefaultAuthor
 )
 
 type Info struct {
+	Community    string `json:"community"`
+	Author       string `json:"author"`
 	Version      string `json:"gitVersion"`
 	GitCommit    string `json:"gitCommit"`
 	GitTreeState string `json:"gitTreeState"`
@@ -62,6 +69,8 @@ func Get() Info {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	return Info{
+		Community:    Community,
+		Author:       Author,
 		Version:      Version,
 		GitCommit:    GitCommit,
 		GitTreeState: GitTreeState,
@@ -95,14 +104,14 @@ func Print() {
 
 	// 设置表头（横向）
 	t.AppendHeader(table.Row{
-		"Version", "Git Commit", "Build Date",
+		"Community", "Author", "Version", "Git Commit", "Build Date",
 		"Go Version", "Compiler", "Platform", "Runtime Cores", "Total Memory",
 	})
 
 	// 添加数据
 	t.AppendRow([]interface{}{
-		v.Version, v.GitCommit, v.BuildDate,
-		v.GoVersion, v.Compiler, v.Platform,
+		v.Community, v.Author, v.Version, v.GitCommit,
+		v.BuildDate, v.GoVersion, v.Compiler, v.Platform,
 		strconv.Itoa(v.RuntimeCores) + " cores",
 		strconv.Itoa(v.TotalMem) + " KB",
 	})

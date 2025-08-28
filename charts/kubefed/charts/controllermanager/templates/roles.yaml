@@ -87,6 +87,18 @@ rules:
   - secrets
   verbs:
   - get
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - delete
+  - patch
+  - update
 ---
 # Only need access to these core namespaced resources in the KubeFed system
 # namespace regardless of kubefed deployment scope.

@@ -4,6 +4,27 @@
 [![LICENSE](https://img.shields.io/badge/license-apache2.0-green.svg)](https://github.com/kubernetes-sigs/kubefed/blob/master/LICENSE)
 [![Releases](https://img.shields.io/github/release/kubernetes-sigs/kubefed/all.svg)](https://github.com/kubernetes-sigs/kubefed/releases "KubeFed latest release")
 
+## Running status
+```shell
+ ╭━╮╭━╮╱╱╭╮╭╮╱╱╱╱╭━━━┳╮╱╱╱╱╱╱╭╮╱╱╱╱╱╱╱╭╮╭━╮╱╱╭╮╱╱╱╱╱╭━╮╱╱╱╱╭╮
+ ┃┃╰╯┃┃╱╱┃┣╯╰╮╱╱╱┃╭━╮┃┃╱╱╱╱╱╭╯╰╮╱╱╱╱╱╱┃┃┃╭╯╱╱┃┃╱╱╱╱╱┃╭╯╱╱╱╱┃┃
+ ┃╭╮╭╮┣╮╭┫┣╮╭╋╮╱╱┃┃╱╰┫┃╭╮╭┳━┻╮╭╋━━┳━╮╱┃╰╯╯╭╮╭┫╰━┳━━┳╯╰┳━━┳━╯┃
+ ┃┃┃┃┃┃┃┃┃┃┃┃┣╋━━┫┃╱╭┫┃┃┃┃┃━━┫┃┃┃━┫╭┻━┫╭╮┃┃┃┃┃╭╮┃┃━╋╮╭┫┃━┫╭╮┃
+ ┃┃┃┃┃┃╰╯┃╰┫╰┫┣━━┫╰━╯┃╰┫╰╯┣━━┃╰┫┃━┫┣━━┫┃┃╰┫╰╯┃╰╯┃┃━┫┃┃┃┃━┫╰╯┃
+ ╰╯╰╯╰┻━━┻━┻━┻╯╱╱╰━━━┻━┻━━┻━━┻━┻━━┻╯╱╱╰╯╰━┻━━┻━━┻━━╯╰╯╰━━┻━━╯
+ 
+ +------------+--------------+---------+------------------------------------------+----------------------+------------+----------+-------------+---------------+--------------+
+ | COMMUNITY  | AUTHOR       | VERSION | GIT COMMIT                               | BUILD DATE           | GO VERSION | COMPILER | PLATFORM    | RUNTIME CORES | TOTAL MEMORY |
+ +------------+--------------+---------+------------------------------------------+----------------------+------------+----------+-------------+---------------+--------------+
+ | CodeFuture | Jianping Niu | v1.0.1  | 755f46934c8c6cf68f05c2c2ae913b43c2fd46c3 | 2025-08-28T02:13:57Z | go1.24.4   | gc       | linux/amd64 | 16 cores      | 8329 KB      |
+ +------------+--------------+---------+------------------------------------------+----------------------+------------+----------+-------------+---------------+--------------+
+```
+
+## Project layout
+```shell
+
+```
+
 # Kubernetes Cluster Federation
 
 Kubernetes Cluster Federation (KubeFed for short) allows you to coordinate the

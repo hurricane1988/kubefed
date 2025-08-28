@@ -24,8 +24,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sigs.k8s.io/kubefed/pkg/version"
 	"time"
+
+	"sigs.k8s.io/kubefed/pkg/version"
 
 	"github.com/spf13/cobra"
 
@@ -43,10 +44,10 @@ import (
 )
 
 func main() {
-	// Print the version information.
-	version.Print()
 	// Print the terminal information.
 	fmt.Println(version.Term())
+	// Print the version information.
+	version.Print()
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	hyperfedCommand, allCommandFns := NewHyperFedCommand()

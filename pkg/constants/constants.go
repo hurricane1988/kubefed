@@ -15,3 +15,8 @@ limitations under the License.
 */
 
 package constants
+
+const (
+	DefaultCommunity = "CodeFuture"
+	DefaultAuthor    = "Jianping Niu"
+)
