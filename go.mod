@@ -1,8 +1,8 @@
 module sigs.k8s.io/kubefed
 
-go 1.24.4
+go 1.25.0
 
-godebug default=go1.24.4
+godebug default=go1.25.0
 
 require (
 	github.com/evanphx/json-patch v4.12.0+incompatible

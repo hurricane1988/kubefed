@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # --- Stage 1: Build the application ---
-ARG GO_VERSION=1.24.4-alpine3.22
+ARG GO_VERSION=1.25.0-alpine3.22
 FROM golang:${GO_VERSION} AS builder
 
 # Set the working directory in the builder stage
