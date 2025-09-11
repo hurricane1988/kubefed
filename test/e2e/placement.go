@@ -38,7 +38,7 @@ import (
 var _ = Describe("Placement", func() {
 	f := framework.NewKubeFedFramework("placement")
 	ctx := context.Background()
-	immediate := false
+	immediate := true
 	tl := framework.NewE2ELogger()
 
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)

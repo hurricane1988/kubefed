@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"context"
+
 	. "github.com/onsi/ginkgo" //nolint:stylecheck
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +32,7 @@ var typeConfigName = "deployments.apps"
 var _ = Describe("DeleteOptions", func() {
 	f := framework.NewKubeFedFramework("delete-options")
 	ctx := context.Background()
-	immediate := false
+	immediate := true
 	tl := framework.NewE2ELogger()
 
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)

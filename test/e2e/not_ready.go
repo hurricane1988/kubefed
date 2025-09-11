@@ -60,7 +60,7 @@ var _ = Describe("[NOT_READY] Simulated not-ready nodes", func() {
 	baseName := "unhealthy-test"
 	f := framework.NewKubeFedFramework(baseName)
 	ctx := context.Background()
-	immediate := false
+	immediate := true
 	tl := framework.NewE2ELogger()
 
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)

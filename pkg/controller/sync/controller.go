@@ -220,7 +220,7 @@ func (s *KubeFedSyncController) Run(stopChan <-chan struct{}) {
 
 // Wait until all data stores are in sync for a definitive timeout, and returns if there is an error or a timeout.
 func (s *KubeFedSyncController) waitForSync() error {
-	return wait.PollUntilContextTimeout(context.Background(), utils.SyncedPollPeriod, s.cacheSyncTimeout, false, func(ctx context.Context) (done bool, err error) {
+	return wait.PollUntilContextTimeout(context.Background(), utils.SyncedPollPeriod, s.cacheSyncTimeout, true, func(ctx context.Context) (done bool, err error) {
 		return s.isSynced(), nil
 	})
 }
@@ -457,7 +457,7 @@ func (s *KubeFedSyncController) setFederatedStatus(fedResource FederatedResource
 
 	// If the underlying resource has changed, attempt to retrieve and
 	// update it repeatedly.
-	err := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 5*time.Second, false, func(ctx context.Context) (done bool, err error) {
+	err := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 5*time.Second, true, func(ctx context.Context) (done bool, err error) {
 		if updateRequired, err := status.SetFederatedStatus(obj, reason, *collectedStatus, *collectedResourceStatus, resourceStatusCollection); err != nil {
 			klog.V(4).Infof("Failed to set the status for %s %q", kind, name)
 			return false, errors.Wrapf(err, "failed to set the status")
