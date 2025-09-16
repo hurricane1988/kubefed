@@ -317,7 +317,7 @@ func (c *FederatedTypeCrudTester) CheckDelete(ctx context.Context, immediate boo
 
 	// Wait for deletion.  The federated resource will only be removed once managed resources have
 	// been deleted or orphaned.
-	err = wait.PollUntilContextTimeout(ctx, c.waitInterval, waitTimeout, false, func(ctx context.Context) (done bool, err error) {
+	err = wait.PollUntilContextTimeout(ctx, c.waitInterval, waitTimeout, true, func(ctx context.Context) (done bool, err error) {
 		_, err = resourceClient.Resources(namespace).Get(ctx, name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return true, nil
@@ -530,7 +530,7 @@ func (c *FederatedTypeCrudTester) CheckPropagation(ctx context.Context, immediat
 		// Use a longer wait interval to avoid spamming the test log.
 		waitInterval := 1 * time.Second
 		var waitingForError error
-		err = wait.PollUntilContextTimeout(context.Background(), waitInterval, c.clusterWaitTimeout, false, func(ctx context.Context) (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.Background(), waitInterval, c.clusterWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
 			ok, err := c.checkFederatedStatus(fedObject, clusterName, objExpected)
 			if err != nil {
 				// Logging lots of waiting messages would clutter the
@@ -719,7 +719,7 @@ func (c *FederatedTypeCrudTester) waitForResourceDeletion(ctx context.Context, i
 func (c *FederatedTypeCrudTester) updateObject(ctx context.Context, apiResource metav1.APIResource, obj *unstructured.Unstructured, mutateResourceFunc func(*unstructured.Unstructured)) (*unstructured.Unstructured, error) {
 	resourceClient := c.resourceClient(apiResource)
 	var updatedObj *unstructured.Unstructured
-	err := wait.PollUntilContextTimeout(ctx, c.waitInterval, wait.ForeverTestTimeout, false, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, c.waitInterval, wait.ForeverTestTimeout, true, func(ctx context.Context) (bool, error) {
 		mutateResourceFunc(obj)
 
 		var err error

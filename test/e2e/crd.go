@@ -46,7 +46,7 @@ import (
 var _ = ginkgo.Describe("Federated CRD resources", func() {
 	f := framework.NewKubeFedFramework("crd-resources")
 	ctx := context.Background()
-	immediate := false
+	immediate := true
 	namespaceScoped := []bool{
 		true,
 		false,

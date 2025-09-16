@@ -291,7 +291,7 @@ func (m *Manager) writeVersion(obj runtimeclient.Object, qualifiedName utils.Qua
 	refreshVersion := false
 	// TODO(marun) Centralize polling interval and duration
 	waitDuration := 30 * time.Second
-	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, waitDuration, false, func(ctx context.Context) (done bool, err error) {
+	err = wait.PollUntilContextTimeout(context.Background(), 100*time.Millisecond, waitDuration, true, func(ctx context.Context) (done bool, err error) {
 		if refreshVersion {
 			// Version was written to the API by another process after the last manager write.
 			resourceVersion, err = m.getResourceVersionFromAPI(qualifiedName)

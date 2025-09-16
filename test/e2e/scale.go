@@ -68,7 +68,7 @@ var _ = Describe("Simulated Scale", func() {
 	baseName := "scale-test"
 	f := framework.NewKubeFedFramework(baseName)
 	ctx := context.Background()
-	immediate := false
+	immediate := true
 	tl := framework.NewE2ELogger()
 
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)

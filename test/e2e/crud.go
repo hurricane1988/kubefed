@@ -47,7 +47,7 @@ type testObjectsAccessor func(namespace string, clusterNames []string) (targetOb
 var _ = Describe("Federated", func() {
 	f := framework.NewKubeFedFramework("federated-types")
 	ctx := context.Background()
-	immediate := false
+	immediate := true
 	tl := framework.NewE2ELogger()
 
 	typeConfigFixtures := common.TypeConfigFixturesOrDie(tl)

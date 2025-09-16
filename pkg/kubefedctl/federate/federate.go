@@ -484,7 +484,7 @@ func CreateFederatedResource(hostConfig *rest.Config, typeConfig typeconfig.Inte
 	if !dryRun {
 		// It might take a little while for the federated type to appear if the
 		// same is being enabled while or immediately before federating the resource.
-		err = wait.PollUntilContextTimeout(context.Background(), createResourceRetryInterval, createResourceRetryTimeout, false, func(ctx context.Context) (done bool, err error) {
+		err = wait.PollUntilContextTimeout(context.Background(), createResourceRetryInterval, createResourceRetryTimeout, true, func(ctx context.Context) (done bool, err error) {
 			_, err = fedClient.Resources(federatedResource.GetNamespace()).Create(context.Background(), federatedResource, metav1.CreateOptions{})
 			if apierrors.IsNotFound(err) {
 				return false, nil
