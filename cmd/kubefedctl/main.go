@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 
+	"go.uber.org/automaxprocs/maxprocs"
 	"sigs.k8s.io/kubefed/pkg/version"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // Load all client auth plugins for GCP, Azure, Openstack, etc
@@ -40,4 +41,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1) //nolint:gocritic
 	}
+}
+
+// 设置容器化部署可感知到cgroup控制的CPU
+func init() {
+	_, _ = maxprocs.Set()
 }

@@ -78,7 +78,7 @@ func Get() Info {
 		GoVersion:    runtime.Version(),
 		Compiler:     runtime.Compiler,
 		Platform:     fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
-		RuntimeCores: runtime.NumCPU(),
+		RuntimeCores: runtime.GOMAXPROCS(0),
 		TotalMem:     int(memStats.TotalAlloc / 1024),
 	}
 }
