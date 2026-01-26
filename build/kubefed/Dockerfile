@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # --- Stage 1: Build the application ---
-ARG GO_VERSION=1.25.0-alpine3.22
+ARG GO_VERSION=1.25.5-alpine3.21
 FROM golang:${GO_VERSION} AS builder
 
 # Set the working directory in the builder stage
@@ -44,8 +44,8 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build \
               -X sigs.k8s.io/kubefed/pkg/version.BuildDate=${BUILDDATE}" -a -o /tmp/hyperfed cmd/hyperfed/main.go
 
 # --- Stage 2: Prepare the runtime environment ---
-FROM alpine:3.22.1
-
+#FROM alpine:3.22.1
+FROM registry.faw.cn/security/alpine:3
 # Install the curl tool
 RUN apk add --no-cache curl
 

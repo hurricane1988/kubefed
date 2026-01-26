@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-VERSION ?= v1.0.1
+VERSION ?= v1.0.2
 IMG ?= codefuthure/kubefed
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
