@@ -44,8 +44,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build \
               -X sigs.k8s.io/kubefed/pkg/version.BuildDate=${BUILDDATE}" -a -o /tmp/hyperfed cmd/hyperfed/main.go
 
 # --- Stage 2: Prepare the runtime environment ---
-#FROM alpine:3.22.1
-FROM registry.faw.cn/security/alpine:3
+FROM alpine:3.22.1
 # Install the curl tool
 RUN apk add --no-cache curl
 
