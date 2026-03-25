@@ -1,4 +1,4 @@
-# Copyright 2018 The Kubernetes Authors.
+# Copyright 2026 The CodeFuture Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # --- Stage 1: Build the application ---
-ARG GO_VERSION=1.25.5-alpine3.21
+ARG GO_VERSION=1.26.1-alpine3.23
 FROM golang:${GO_VERSION} AS builder
 
 # Set the working directory in the builder stage
@@ -29,7 +29,7 @@ ARG GITCOMMIT
 ARG GITTREESTATE
 ARG BUILDDATE
 ARG TARGETARCH
-# NOTICE: ARG 变量中的带有逗号、分号或特殊字符的值加上引号
+# NOTICE: Enclose ARG values containing commas, semicolons, or special characters in quotes.
 ARG GOPROXY="https://goproxy.cn,direct"
 
 # Build
@@ -44,7 +44,8 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build \
               -X sigs.k8s.io/kubefed/pkg/version.BuildDate=${BUILDDATE}" -a -o /tmp/hyperfed cmd/hyperfed/main.go
 
 # --- Stage 2: Prepare the runtime environment ---
-FROM alpine:3.22.1
+FROM alpine:3.23.3
+
 # Install the curl tool
 RUN apk add --no-cache curl
 

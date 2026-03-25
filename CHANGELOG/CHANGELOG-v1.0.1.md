@@ -143,7 +143,7 @@
 ├── example
 │   ├── config
 │   │   └── kubefedconfig.yaml
-│   ├── sample1
+│   ├── sample
 │   │   ├── configmap.yaml
 │   │   ├── deployment.yaml
 │   │   ├── federatedclusterrole.yaml

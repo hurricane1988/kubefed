@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 
-	"go.uber.org/automaxprocs/maxprocs"
 	"sigs.k8s.io/kubefed/pkg/version"
 
 	_ "sigs.k8s.io/controller-runtime/pkg/metrics" // for work queue metrics registration
@@ -52,9 +51,4 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-}
-
-// 设置容器化部署可感知到cgroup控制的CPU
-func init() {
-	_, _ = maxprocs.Set()
 }

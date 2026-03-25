@@ -1,4 +1,4 @@
-# Copyright 2018 The Kubernetes Authors.
+# Copyright 2026 The CodeFuture Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +13,8 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-VERSION ?= v1.0.2
+VERSION ?= v1.1.0
 IMG ?= codefuthure/kubefed
-
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -48,10 +47,10 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.3.0
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+KUSTOMIZE_VERSION ?= v5.8.1
+CONTROLLER_TOOLS_VERSION ?= v0.20.1
 ENVTEST_VERSION ?= latest
-GOLANGCI_LINT_VERSION ?= v1.54.2
+GOLANGCI_LINT_VERSION ?= v1.64.8
 
 ## Tool Binaries
 KUBECTL ?= kubectl
@@ -72,23 +71,31 @@ GIT_BRANCH ?= $(filter-out HEAD,$(shell git rev-parse --abbrev-ref HEAD 2>/dev/n
 # Get the build date in UTC format
 BUILDDATE = $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 
+##@ General
 .PHONY: help
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-.PHONY: all
+.PHONY: list-envtest
+list-envtest: ## list the remote avaiable envtest binary.
+	@go list -m -versions sigs.k8s.io/controller-runtime | tr ' ' '\n' | tail -n 10
 
-all: help
+.PHONY: list-kustomize
+list-kustomize: ## list the remote avaiable kustomize binary.
+	@go list -m -versions sigs.k8s.io/kustomize | tr ' ' '\n' | tail -n 10
+
+.PHONY: list-controller
+list-controller: ## list the remote avaiable controller-gen binary.
+	@go list -m -versions sigs.k8s.io/controller-tools | tr ' ' '\n' | tail -n 10
+
+.PHONY: list-golangci
+list-golangci: ## list the remote avaiable golangci-lint binary.
+	@go list -m -versions github.com/golangci/golangci-lint | tr ' ' '\n' | tail -n 10
 
 ##@ Development
 ifndef ignore-not-found
   ignore-not-found = false
 endif
-
-.PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
-$(CONTROLLER_GEN): $(LOCALBIN)
-	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
 
 .PHONY: manifests
 manifests: generate-code ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -161,13 +168,22 @@ docker-buildx: ## Build and push docker image for the kubefed for cross-platform
  											--build-arg VERSION=$(VERSION) --build-arg GITCOMMIT=$(GIT_COMMIT) --build-arg GIT_TREE_STATE=$(GIT_TREE_STATE) --build-arg BUILDDATE=$(BUILDDATE) .
 	- $(CONTAINER_TOOL) buildx rm kubefed
 
-
 ##@ Dependencies
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
+
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+$(KUSTOMIZE): $(LOCALBIN)
+	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
 
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.

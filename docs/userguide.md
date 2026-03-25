@@ -522,8 +522,8 @@ It will then show how to update the `federatednamespace` resource to move resour
 Create the `test-namespace` for the test resources.
 
 ```bash
-kubectl apply -f example/sample1/namespace.yaml \
-    -f example/sample1/federatednamespace.yaml
+kubectl apply -f example/sample/namespace.yaml \
+    -f example/sample/federatednamespace.yaml
 ```
 
 ### Creating test resources
@@ -531,7 +531,7 @@ kubectl apply -f example/sample1/namespace.yaml \
 Create test resources.
 
 ```bash
-kubectl apply -R -f example/sample1
+kubectl apply -R -f example/sample
 ```
  **NOTE:** If you get the following error while creating a test resource
 ```

@@ -26,7 +26,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"go.uber.org/automaxprocs/maxprocs"
 	"sigs.k8s.io/kubefed/pkg/version"
 
 	"github.com/spf13/cobra"
@@ -153,9 +152,4 @@ func makeSymlinks(targetName string, commandFns []func() *cobra.Command) error {
 		return errors.New("error creating one or more symlinks")
 	}
 	return nil
-}
-
-// 设置容器化部署可感知到cgroup控制的CPU
-func init() {
-	_, _ = maxprocs.Set()
 }

@@ -23,9 +23,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
+
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"strings"
 
 	// Installs pprof profiling debug endpoints at /debug/pprof.
 	_ "net/http/pprof"
@@ -96,7 +97,7 @@ member clusters and do the necessary reconciliation`,
 	}
 
 	flags := cmd.Flags()
-	opts.AddFlags(flags)
+	// 绑定局部变量
 	flags.StringVar(&healthzAddr, "healthz-addr", HealthzDefaultBindAddress, "The address the healthz endpoint binds to.")
 	flags.StringVar(&metricsAddr, "metrics-addr", MetricsDefaultBindAddress, "The address the metric endpoint binds to.")
 	flags.BoolVar(&verFlag, "version", false, "Prints the Version info of controller-manager.")
@@ -106,6 +107,10 @@ member clusters and do the necessary reconciliation`,
 	flags.Float32Var(&restConfigQPS, "rest-config-qps", 100.0, "Maximum QPS to the api-server from this client.")
 	flags.IntVar(&restConfigBurst, "rest-config-burst", 200, "Maximum burst for throttle to the api-server from this client.")
 
+	// 绑定 Options 中的参数 (包含 Leader Election)
+	opts.AddFlags(flags)
+
+	// 绑定外部库参数
 	local := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	klog.InitFlags(local)
 	flags.AddGoFlagSet(local)
