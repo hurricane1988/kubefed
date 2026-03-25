@@ -4,27 +4,164 @@
 [![LICENSE](https://img.shields.io/badge/license-apache2.0-green.svg)](https://github.com/kubernetes-sigs/kubefed/blob/master/LICENSE)
 [![Releases](https://img.shields.io/github/release/kubernetes-sigs/kubefed/all.svg)](https://github.com/kubernetes-sigs/kubefed/releases "KubeFed latest release")
 
+---
 ## Running status
 ```shell
- ╭━╮╭━╮╱╱╭╮╭╮╱╱╱╱╭━━━┳╮╱╱╱╱╱╱╭╮╱╱╱╱╱╱╱╭╮╭━╮╱╱╭╮╱╱╱╱╱╭━╮╱╱╱╱╭╮
- ┃┃╰╯┃┃╱╱┃┣╯╰╮╱╱╱┃╭━╮┃┃╱╱╱╱╱╭╯╰╮╱╱╱╱╱╱┃┃┃╭╯╱╱┃┃╱╱╱╱╱┃╭╯╱╱╱╱┃┃
- ┃╭╮╭╮┣╮╭┫┣╮╭╋╮╱╱┃┃╱╰┫┃╭╮╭┳━┻╮╭╋━━┳━╮╱┃╰╯╯╭╮╭┫╰━┳━━┳╯╰┳━━┳━╯┃
- ┃┃┃┃┃┃┃┃┃┃┃┃┣╋━━┫┃╱╭┫┃┃┃┃┃━━┫┃┃┃━┫╭┻━┫╭╮┃┃┃┃┃╭╮┃┃━╋╮╭┫┃━┫╭╮┃
- ┃┃┃┃┃┃╰╯┃╰┫╰┫┣━━┫╰━╯┃╰┫╰╯┣━━┃╰┫┃━┫┣━━┫┃┃╰┫╰╯┃╰╯┃┃━┫┃┃┃┃━┫╰╯┃
- ╰╯╰╯╰┻━━┻━┻━┻╯╱╱╰━━━┻━┻━━┻━━┻━┻━━┻╯╱╱╰╯╰━┻━━┻━━┻━━╯╰╯╰━━┻━━╯
- 
- +------------+--------------+---------+------------------------------------------+----------------------+------------+----------+-------------+---------------+--------------+
- | COMMUNITY  | AUTHOR       | VERSION | GIT COMMIT                               | BUILD DATE           | GO VERSION | COMPILER | PLATFORM    | RUNTIME CORES | TOTAL MEMORY |
- +------------+--------------+---------+------------------------------------------+----------------------+------------+----------+-------------+---------------+--------------+
- | CodeFuture | Jianping Niu | v1.0.1  | 755f46934c8c6cf68f05c2c2ae913b43c2fd46c3 | 2025-08-28T02:13:57Z | go1.25.0   | gc       | linux/amd64 | 16 cores      | 8329 KB      |
- +------------+--------------+---------+------------------------------------------+----------------------+------------+----------+-------------+---------------+--------------+
-```
+╭━╮╭━╮╱╱╭╮╭╮╱╱╱╱╭━━━┳╮╱╱╱╱╱╱╭╮╱╱╱╱╱╱╱╭╮╭━╮╱╱╭╮╱╱╱╱╱╭━╮╱╱╱╱╭╮
+┃┃╰╯┃┃╱╱┃┣╯╰╮╱╱╱┃╭━╮┃┃╱╱╱╱╱╭╯╰╮╱╱╱╱╱╱┃┃┃╭╯╱╱┃┃╱╱╱╱╱┃╭╯╱╱╱╱┃┃
+┃╭╮╭╮┣╮╭┫┣╮╭╋╮╱╱┃┃╱╰┫┃╭╮╭┳━┻╮╭╋━━┳━╮╱┃╰╯╯╭╮╭┫╰━┳━━┳╯╰┳━━┳━╯┃
+┃┃┃┃┃┃┃┃┃┃┃┃┣╋━━┫┃╱╭┫┃┃┃┃┃━━┫┃┃┃━┫╭┻━┫╭╮┃┃┃┃┃╭╮┃┃━╋╮╭┫┃━┫╭╮┃
+┃┃┃┃┃┃╰╯┃╰┫╰┫┣━━┫╰━╯┃╰┫╰╯┣━━┃╰┫┃━┫┣━━┫┃┃╰┫╰╯┃╰╯┃┃━┫┃┃┃┃━┫╰╯┃
+╰╯╰╯╰┻━━┻━┻━┻╯╱╱╰━━━┻━┻━━┻━━┻━┻━━┻╯╱╱╰╯╰━┻━━┻━━┻━━╯╰╯╰━━┻━━╯
 
++------------+--------------+---------+------------------------------------------+----------------------+------------+----------+--------------+---------------+--------------+
+| COMMUNITY  | AUTHOR       | VERSION | GIT COMMIT                               | BUILD DATE           | GO VERSION | COMPILER | PLATFORM     | RUNTIME CORES | TOTAL MEMORY |
++------------+--------------+---------+------------------------------------------+----------------------+------------+----------+--------------+---------------+--------------+
+| CodeFuture | Jianping Niu | v1.1.0  | 137cff22e5580fda7851e3b86300280c121d2cbf | 2026-03-25T02:38:58Z | go1.26.1   | gc       | darwin/arm64 | 10 cores      | 9158 KB      |
++------------+--------------+---------+------------------------------------------+----------------------+------------+----------+--------------+---------------+--------------+
+The KubeFed controller manager runs a bunch of controllers
+which watch KubeFed CRDs and the corresponding resources in
+member clusters and do the necessary reconciliation
+````
+---
 ## Project layout
 ```shell
-
+.
+├── CHANGELOG
+│   ├── CHANGELOG-v1.0.1.md
+│   ├── CHANGELOG-v1.0.2.md
+│   └── CHANGELOG-v1.1.0.md
+├── CONTRIBUTING.md
+├── LICENSE
+├── Makefile
+├── OWNERS
+├── PROJECT
+├── README.md
+├── SECURITY.md
+├── SECURITY_CONTACTS
+│   ├── controller-manager
+│   ├── hyperfed
+│   ├── kubefedctl
+│   └── webhook
+├── build
+│   └── kubefed
+├── charts
+│   ├── index.yaml
+│   ├── kubefed
+│   └── service-monitor.yaml
+├── cmd
+│   ├── controller-manager
+│   ├── hyperfed
+│   ├── kubefedctl
+│   └── webhook
+├── code-of-conduct.md
+├── config
+│   ├── crds
+│   ├── enabletypedirectives
+│   └── kubefedconfig.yaml
+├── docs
+│   ├── OWNERS
+│   ├── cluster-registration.md
+│   ├── concepts.md
+│   ├── development.md
+│   ├── environments
+│   ├── images
+│   ├── installation.md
+│   ├── keps
+│   ├── project-layout.md
+│   ├── releasing.md
+│   └── userguide.md
+├── example
+│   ├── config
+│   ├── sample
+│   └── scheduling
+├── go.mod
+├── go.sum
+├── hack
+│   ├── boilerplate.go.txt
+│   ├── doc.go
+│   ├── verify-docfiles.sh
+│   ├── verify-errpkg.sh
+│   └── verify-klog.sh
+├── pkg
+│   ├── apis
+│   ├── client
+│   ├── constants
+│   ├── controller
+│   ├── doc.go
+│   ├── features
+│   ├── kubefedctl
+│   ├── metrics
+│   ├── schedulingtypes
+│   └── version
+├── scripts
+│   ├── build-release-artifacts.sh
+│   ├── build-release.sh
+│   ├── check-directive-fixtures.sh
+│   ├── create-clusters.sh
+│   ├── create-gh-release.sh
+│   ├── delete-clusters.sh
+│   ├── delete-kubefed.sh
+│   ├── deploy-federated-nginx.sh
+│   ├── deploy-kubefed-latest.sh
+│   ├── deploy-kubefed.sh
+│   ├── download-binaries.sh
+│   ├── download-e2e-binaries.sh
+│   ├── fix-ca-for-k3s.sh
+│   ├── fix-joined-kind-clusters.sh
+│   ├── pre-commit.sh
+│   ├── sync-up-helm-chart.sh
+│   ├── update-bindata.sh
+│   └── util.sh
+├── staticcheck.conf
+├── test
+│   ├── common
+│   └── e2e
+├── third-party
+│   └── k8s.io
+└── tools
+    ├── go.mod
+    ├── go.sum
+    └── tools.go
 ```
+---
+## Project Usage
+```shell
+Usage:
+  controller-manager [flags]
 
+Flags:
+      --add_dir_header                         If true, adds the file directory to the header of the log messages
+      --alsologtostderr                        log to standard error as well as files (no effect when -logtostderr=true)
+      --alsologtostderrthreshold severity      logs at or above this threshold go to stderr when -alsologtostderr=true (no effect when -logtostderr=true)
+      --cluster-health-check-period duration   How often to check the health of cluster. (default 10s)
+      --healthz-addr string                    The address the healthz endpoint binds to. (default ":8080")
+  -h, --help                                   help for controller-manager
+      --kubeconfig string                      Path to a kubeconfig. Only required if out-of-cluster.
+      --kubefed-config string                  Path to a KubeFedConfig yaml file. Test only.
+      --kubefed-namespace string               The namespace the KubeFed control plane is deployed in.
+      --leader-elect-lease-duration duration   The maximum duration that a leader can be stopped before it is replaced by another candidate. (default 15s)
+      --leader-elect-renew-deadline duration   The interval between attempts by the acting master to renew a leadership slot before it stops leading. (default 10s)
+      --leader-elect-resource-lock string      The type of resource object that will be used to lock during leader election. (default "leases")
+      --leader-elect-retry-period duration     The duration the clients should wait between attempting acquisition and renewal of a leadership. (default 5s)
+      --legacy_stderr_threshold_behavior       If true, stderrthreshold is ignored when logtostderr=true (legacy behavior). If false, stderrthreshold is honored even when logtostderr=true (default true)
+      --log_backtrace_at traceLocation         when logging hits line file:N, emit a stack trace (default :0)
+      --log_dir string                         If non-empty, write log files in this directory (no effect when -logtostderr=true)
+      --log_file string                        If non-empty, use this log file (no effect when -logtostderr=true)
+      --log_file_max_size uint                 Defines the maximum size a log file can grow to (no effect when -logtostderr=true). Unit is megabytes. If the value is 0, the maximum file size is unlimited. (default 1800)
+      --logtostderr                            log to standard error instead of files (default true)
+      --master string                          The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.
+      --metrics-addr string                    The address the metric endpoint binds to. (default ":9090")
+      --one_output                             If true, only write logs to their native severity level (vs also writing to each lower severity level; no effect when -logtostderr=true)
+      --rest-config-burst int                  Maximum burst for throttle to the api-server from this client. (default 200)
+      --rest-config-qps float32                Maximum QPS to the api-server from this client. (default 100)
+      --skip_headers                           If true, avoid header prefixes in the log messages
+      --skip_log_headers                       If true, avoid headers when opening log files (no effect when -logtostderr=true)
+      --stderrthreshold severity               logs at or above this threshold go to stderr when writing to files and stderr (no effect when -logtostderr=true or -alsologtostderr=true unless -legacy_stderr_threshold_behavior=false) (default 2)
+  -v, --v Level                                number for the log level verbosity
+      --version                                Prints the Version info of controller-manager.
+      --vmodule moduleSpec                     comma-separated list of pattern=N settings for file-filtered logging
+```
 # Kubernetes Cluster Federation
 
 Kubernetes Cluster Federation (KubeFed for short) allows you to coordinate the
