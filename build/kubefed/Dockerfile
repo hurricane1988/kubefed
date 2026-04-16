@@ -13,69 +13,62 @@
 # limitations under the License.
 
 # --- Stage 1: Build the application ---
-ARG GO_VERSION=1.26.1-alpine3.23
+ARG GO_VERSION=1.26.2-alpine3.23
 FROM golang:${GO_VERSION} AS builder
 
-# Set the working directory in the builder stage
-WORKDIR /build
-# Copy the application source code into the build stage
+# Set Go Proxy for faster dependency downloads
+ARG GOPROXY="https://goproxy.cn,direct"
+ENV GOPROXY=${GOPROXY}
+
+WORKDIR /workspace
+
+# Copy dependency files first to leverage Docker layer caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy the source code
 COPY . .
 
-# This is the architecture you're building for, which is passed in by the builder.
-# Placing it here allows the previous steps to be cached across architectures.
+# Build arguments passed by the build system
 ARG TARGETOS
 ARG VERSION
 ARG GITCOMMIT
 ARG GITTREESTATE
 ARG BUILDDATE
 ARG TARGETARCH
-# NOTICE: Enclose ARG values containing commas, semicolons, or special characters in quotes.
-ARG GOPROXY="https://goproxy.cn,direct"
 
-# Build
-# the GOARCH has not a default value to allow the binary be built according to the host where the command
-# was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
-# the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
-# by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build \
-    -ldflags "-X sigs.k8s.io/kubefed/pkg/version.Version=${VERSION} \
+# Build the binary with optimization flags
+# -s -w: Omit symbol table and debug information to reduce binary size
+# -trimpath: Remove file system paths from the resulting binary for better reproducibility
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} \
+    go build -trimpath -ldflags "-s -w \
+              -X sigs.k8s.io/kubefed/pkg/version.Version=${VERSION} \
               -X sigs.k8s.io/kubefed/pkg/version.GitCommit=${GITCOMMIT} \
               -X sigs.k8s.io/kubefed/pkg/version.GitTreeState=${GITTREESTATE} \
-              -X sigs.k8s.io/kubefed/pkg/version.BuildDate=${BUILDDATE}" -a -o /tmp/hyperfed cmd/hyperfed/main.go
+              -X sigs.k8s.io/kubefed/pkg/version.BuildDate=${BUILDDATE}" \
+    -a -o hyperfed cmd/hyperfed/main.go
 
-# --- Stage 2: Prepare the runtime environment ---
-FROM alpine:3.23.3
-
-# Install the curl tool
-RUN apk add --no-cache curl
-
-# Set the working directory
-WORKDIR /hyperfed/
-
-# Create a non-privileged user that the app will run under.
-# See https://docs.docker.com/go/dockerfile-user-best-practices/
-ARG UID=10001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid "${UID}" \
-    hyperfed
-
-# Create the application directory
-RUN mkdir -p /hyperfed
-
-# Copy the binary built in the first stage
-COPY --from=builder /tmp/ /hyperfed/
-
+# Create symbolic links in the builder stage because the runtime image (distroless)
+# does not contain a shell or the 'ln' command.
 RUN ln -s hyperfed controller-manager \
  && ln -s hyperfed kubefedctl \
  && ln -s hyperfed webhook
 
-# Setup the app user
-USER hyperfed
+# --- Stage 2: Prepare the runtime environment ---
+# Distroless static images are highly secure as they contain only the application and its dependencies
+FROM gcr.io/distroless/static-debian13:latest
+# Set the working directory
+WORKDIR /hyperfed/
 
-# Set the default entrypoint for the container
-CMD ["sh"]
+# Copy the binary built in the first stage
+COPY --from=builder /workspace/hyperfed /hyperfed/
+COPY --from=builder /workspace/controller-manager /hyperfed/
+COPY --from=builder /workspace/kubefedctl /hyperfed/
+COPY --from=builder /workspace/webhook /hyperfed/
+
+# Use UID 65534 (nobody) for security compliance in restricted Kubernetes environments
+USER 65534:65534
+
+# Set the default entrypoint.
+# Since distroless has no shell, we must use the exec form and point to the binary directly.
+ENTRYPOINT ["/hyperfed/hyperfed"]

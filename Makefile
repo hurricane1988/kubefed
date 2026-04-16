@@ -13,8 +13,9 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-VERSION ?= v1.1.0
+VERSION ?= v1.1.1
 IMG ?= codefuthure/kubefed
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -36,15 +37,27 @@ SHELL = /usr/bin/env bash -o pipefail
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
 GIT_TREE_STATE ?= $(shell if git diff --quiet && git diff --cached --quiet; then echo clean; else echo dirty; fi)
 
-LDFLAG_OPTIONS = -ldflags "-X sigs.k8s.io/kubefed/pkg/version.Version=$(VERSION) \
-                      -X sigs.k8s.io/kubefed/pkg/version.GitCommit=$(GIT_COMMIT) \
-                      -X sigs.k8s.io/kubefed/pkg/version.GitTreeState=$(GIT_TREE_STATE) \
-                      -X sigs.k8s.io/kubefed/pkg/version.BuildDate=$(BUILDDATE)"
+## Architecture and OS detection (defaults to local environment)
+ARCH ?= $(shell go env GOARCH)
+OS ?= $(shell uname -s | tr A-Z a-z)
+
+## Binary and Image naming conventions
+BINARY_NAME ?= metrics-server-$(OS)-$(ARCH)
+
+## Append .exe suffix to the binary name if the target OS is Windows
+ifeq ($(OS),windows)
+BINARY_NAME := $(BINARY_NAME).exe
+endif
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
+
+## Directory where build artifacts and generated binaries will be stored
+OUTPUT_DIR ?= _output
+$(OUTPUT_DIR):
+	mkdir -p $(OUTPUT_DIR)
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.8.1
@@ -62,19 +75,45 @@ GOLANGCI_LINT = $(LOCALBIN)/golangci-lint-$(GOLANGCI_LINT_VERSION)
 
 # Retrieve the Git version information, including any local changes
 GIT_VERSION ?= $(shell git describe --always --dirty)
+
 # Retrieve the exact Git tag if it matches the current commit, otherwise empty
 GIT_TAG ?= $(shell git describe --tags --exact-match 2>/dev/null)
+
 # Retrieve the full Git commit hash
 GIT_HASH ?= $(shell git rev-parse HEAD)
+
 # Retrieve the current Git branch name, excluding 'HEAD' if present
 GIT_BRANCH ?= $(filter-out HEAD,$(shell git rev-parse --abbrev-ref HEAD 2>/dev/null))
+
 # Get the build date in UTC format
 BUILDDATE = $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+# Go module name extraction
+KSM_MODULE = $(shell go list -m)
+
+# Supported CPU architectures for Linux builds
+ALL_ARCHITECTURES = amd64 arm arm64
+
+# Full list of target OS/Architecture platforms for cross-compilation
+ALL_BINARIES_PLATFORMS = $(addprefix linux/,$(ALL_ARCHITECTURES)) \
+                         darwin/amd64 \
+                         darwin/arm64 \
+                         windows/amd64 \
+                         windows/arm64
+
+## Enable experimental features in the Docker CLI (required for manifest and cross-platform builds)
+export DOCKER_CLI_EXPERIMENTAL=enabled
+
+LDFLAG_OPTIONS = -mod=readonly -trimpath -ldflags "-s -w \
+					  -X ${KSM_MODULE}/pkg/version.Version=$(VERSION) \
+                      -X ${KSM_MODULE}/pkg/version.GitCommit=$(GIT_COMMIT) \
+                      -X ${KSM_MODULE}/pkg/version.GitTreeState=$(GIT_TREE_STATE) \
+                      -X ${KSM_MODULE}/pkg/version.BuildDate=$(BUILDDATE)"
 
 ##@ General
 .PHONY: help
 help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 .PHONY: list-envtest
 list-envtest: ## list the remote avaiable envtest binary.
@@ -125,13 +164,23 @@ test: ## Run unit test.
 		go test $(TEST_PKGS)
 
 ##@ Build
+# Build Rules
+# -----------
+
+SRC_DEPS=$(shell find pkg cmd -type f -name "*.go") go.mod go.sum
+CHECKSUM=$(shell md5sum $(SRC_DEPS) | md5sum | awk '{print $$1}')
 
 .PHONY: build
-build: fmt vet ## build hyperfed controller kubefedctl webhook binary.
-	go build $(LDFLAG_OPTIONS) -o bin/controller-manager cmd/controller-manager/main.go
-	go build $(LDFLAG_OPTIONS) -o bin/hyperfed cmd/hyperfed/main.go
-	go build $(LDFLAG_OPTIONS) -o bin/kubefedctl cmd/kubefedctl/main.go
-	go build $(LDFLAG_OPTIONS) -o bin/webhook cmd/webhook/main.go
+build: fmt vet $(SRC_DEPS) ## build hyperfed controller kubefedctl webhook binary.
+	go build $(LDFLAG_OPTIONS) -a -o $(OUTPUT_DIR)/controller-manager-$(OS)-$(ARCH) cmd/controller-manager/main.go
+	go build $(LDFLAG_OPTIONS) -a -o $(OUTPUT_DIR)/hyperfed-$(OS)-$(ARCH) cmd/hyperfed/main.go
+	go build $(LDFLAG_OPTIONS) -a -o $(OUTPUT_DIR)/kubefedctl-$(OS)-$(ARCH) cmd/kubefedctl/main.go
+
+.PHONY: build-all
+build-all: ## Build binaries for all supported platforms (OS/Arch combinations)
+	@for platform in $(ALL_BINARIES_PLATFORMS); do \
+	   OS="$${platform%/*}" ARCH="$${platform#*/}" $(MAKE) build; \
+	done
 
 .PHONY: lint
 lint: ## Run golangci-lint check.
@@ -165,7 +214,10 @@ docker-buildx: ## Build and push docker image for the kubefed for cross-platform
 	- $(CONTAINER_TOOL) buildx create --name kubefed
 	$(CONTAINER_TOOL) buildx use kubefed
 	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG}:${VERSION} -f build/kubefed/Dockerfile \
- 											--build-arg VERSION=$(VERSION) --build-arg GITCOMMIT=$(GIT_COMMIT) --build-arg GIT_TREE_STATE=$(GIT_TREE_STATE) --build-arg BUILDDATE=$(BUILDDATE) .
+ 											--build-arg VERSION=$(VERSION) \
+ 											--build-arg GITCOMMIT=$(GIT_COMMIT) \
+ 											--build-arg GIT_TREE_STATE=$(GIT_TREE_STATE) \
+ 											--build-arg BUILDDATE=$(BUILDDATE) .
 	- $(CONTAINER_TOOL) buildx rm kubefed
 
 ##@ Dependencies
@@ -208,8 +260,9 @@ endef
 
 .PHONY: clean
 clean: ## Clean all the binaries.
-	@if [ -d "bin" ];then rm -rf bin; fi
-	$(CONTAINER_TOOL) rmi ${IMG}
+	@if [ -d $(LOCALBIN) ];then rm -rf $(LOCALBIN); fi
+	@if [ -d $(OUTPUT_DIR) ];then rm -rf $(OUTPUT_DIR); fi
+	$(CONTAINER_TOOL) rmi ${IMG}:${VERSION}
 
 .PHONY: deploy.kind
 deploy.kind: generate ## Deploy the kubefed.
