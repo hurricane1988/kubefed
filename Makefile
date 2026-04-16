@@ -42,11 +42,15 @@ ARCH ?= $(shell go env GOARCH)
 OS ?= $(shell uname -s | tr A-Z a-z)
 
 ## Binary and Image naming conventions
-BINARY_NAME ?= metrics-server-$(OS)-$(ARCH)
+CONTROLLER_BINARY_NAME ?= controller-manager-$(OS)-$(ARCH)
+HYPERFED_BINARY_NAME ?= hyperfed-$(OS)-$(ARCH)
+KUBEFEDCTL_BINARY_NAME ?= kubefedctl-$(OS)-$(ARCH)
+
+BINARIES = CONTROLLER_BINARY_NAME HYPERFED_BINARY_NAME KUBEFEDCTL_BINARY_NAME
 
 ## Append .exe suffix to the binary name if the target OS is Windows
 ifeq ($(OS),windows)
-BINARY_NAME := $(BINARY_NAME).exe
+$(foreach bin,$(BINARIES),$(eval $(bin) := $($(bin)).exe))
 endif
 
 ## Location to install dependencies to
@@ -172,9 +176,9 @@ CHECKSUM=$(shell md5sum $(SRC_DEPS) | md5sum | awk '{print $$1}')
 
 .PHONY: build
 build: fmt vet $(SRC_DEPS) ## build hyperfed controller kubefedctl webhook binary.
-	go build $(LDFLAG_OPTIONS) -a -o $(OUTPUT_DIR)/controller-manager-$(OS)-$(ARCH) cmd/controller-manager/main.go
-	go build $(LDFLAG_OPTIONS) -a -o $(OUTPUT_DIR)/hyperfed-$(OS)-$(ARCH) cmd/hyperfed/main.go
-	go build $(LDFLAG_OPTIONS) -a -o $(OUTPUT_DIR)/kubefedctl-$(OS)-$(ARCH) cmd/kubefedctl/main.go
+	go build $(LDFLAG_OPTIONS) -a -o $(OUTPUT_DIR)/$(CONTROLLER_BINARY_NAME) cmd/controller-manager/main.go
+	go build $(LDFLAG_OPTIONS) -a -o $(OUTPUT_DIR)/$(HYPERFED_BINARY_NAME) cmd/hyperfed/main.go
+	go build $(LDFLAG_OPTIONS) -a -o $(OUTPUT_DIR)/$(KUBEFEDCTL_BINARY_NAME) cmd/kubefedctl/main.go
 
 .PHONY: build-all
 build-all: ## Build binaries for all supported platforms (OS/Arch combinations)
@@ -262,7 +266,7 @@ endef
 clean: ## Clean all the binaries.
 	@if [ -d $(LOCALBIN) ];then rm -rf $(LOCALBIN); fi
 	@if [ -d $(OUTPUT_DIR) ];then rm -rf $(OUTPUT_DIR); fi
-	$(CONTAINER_TOOL) rmi ${IMG}:${VERSION}
+	-$(CONTAINER_TOOL) rmi ${IMG}:${VERSION}
 
 .PHONY: deploy.kind
 deploy.kind: generate ## Deploy the kubefed.

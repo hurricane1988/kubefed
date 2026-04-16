@@ -16,27 +16,28 @@
 ## ✨ 新增功能
 - `make build-all` 构建不同架构和系统的执行文件，并存储在`_output`
 ```shell
+.
 ├── controller-manager-darwin-amd64
 ├── controller-manager-darwin-arm64
 ├── controller-manager-linux-amd64
 ├── controller-manager-linux-arm
 ├── controller-manager-linux-arm64
-├── controller-manager-windows-amd64
-├── controller-manager-windows-arm64
+├── controller-manager-windows-amd64.exe
+├── controller-manager-windows-arm64.exe
 ├── hyperfed-darwin-amd64
 ├── hyperfed-darwin-arm64
 ├── hyperfed-linux-amd64
 ├── hyperfed-linux-arm
 ├── hyperfed-linux-arm64
-├── hyperfed-windows-amd64
-├── hyperfed-windows-arm64
+├── hyperfed-windows-amd64.exe
+├── hyperfed-windows-arm64.exe
 ├── kubefedctl-darwin-amd64
 ├── kubefedctl-darwin-arm64
 ├── kubefedctl-linux-amd64
 ├── kubefedctl-linux-arm
 ├── kubefedctl-linux-arm64
-├── kubefedctl-windows-amd64
-└── kubefedctl-windows-arm64
+├── kubefedctl-windows-amd64.exe
+└── kubefedctl-windows-arm64.exe
 ```
 
 ---
